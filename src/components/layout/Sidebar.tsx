@@ -9,12 +9,14 @@ import {
     ClipboardList,
     HeartPulse,
     LayoutDashboard,
+    LogOut,
     Settings,
     Stethoscope,
     Users,
 } from "lucide-react";
 
 import { useSidebar } from "@/contexts/useSidebar";
+import { useAuth } from "@/hooks/useAuth";
 
 const management = [
     {
@@ -114,6 +116,8 @@ export default function Sidebar() {
         collapsed,
         toggleSidebar,
     } = useSidebar();
+
+    const { logout } = useAuth();
 
     return (
         <aside
@@ -258,6 +262,29 @@ export default function Sidebar() {
                     href="/configuracion"
                     collapsed={collapsed}
                 />
+
+                {/* Cerrar sesión */}
+                <button
+                    type="button"
+                    onClick={logout}
+                    title={collapsed ? "Cerrar sesión" : undefined}
+                    className={`group mt-1 flex w-full items-center rounded-xl py-2.5 text-sm text-slate-400 transition-all hover:bg-red-500/10 hover:text-red-400 ${
+                        collapsed
+                            ? "justify-center px-2"
+                            : "gap-3 px-3"
+                    }`}
+                >
+                    <LogOut
+                        size={18}
+                        className="shrink-0 text-slate-500 transition group-hover:text-red-400"
+                    />
+
+                    {!collapsed && (
+                        <span className="truncate">
+                            Cerrar sesión
+                        </span>
+                    )}
+                </button>
 
                 {/* Usuario */}
                 {!collapsed && (

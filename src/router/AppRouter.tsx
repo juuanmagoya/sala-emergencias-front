@@ -7,77 +7,90 @@ import {
 
 import Dashboard from "@/pages/Dashboard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import LoginPage from "@/pages/auth/LoginPage";
 
 import PacientesPage from "@/pages/pacientes/PacientesPage";
 import EspecialidadesPage from "@/pages/especialidades/EspecialidadesPage";
 import MedicosPage from "@/pages/medicos/MedicosPage";
-
 
 export default function AppRouter() {
     return (
         <BrowserRouter>
             <Routes>
 
-                <Route element={<DashboardLayout />}>
+                {/* Ruta pública */}
+                <Route
+                    path="/login"
+                    element={<LoginPage />}
+                />
 
-                    <Route
-                        path="/"
-                        element={<Dashboard />}
-                    />
+                {/* Rutas protegidas */}
+                <Route element={<ProtectedRoute />}>
 
-                    <Route
-                        path="/pacientes"
-                        element={<PacientesPage />}
-                    />
+                    <Route element={<DashboardLayout />}>
 
-                    <Route
-                        path="/medicos"
-                        element={<MedicosPage />}
-                    />
+                        <Route
+                            path="/"
+                            element={<Dashboard />}
+                        />
 
-                    <Route
-                        path="/turnos"
-                        element={
-                            <div>
-                                Turnos
-                            </div>
-                        }
-                    />
+                        <Route
+                            path="/pacientes"
+                            element={<PacientesPage />}
+                        />
 
-                    <Route
-                        path="/consultorios"
-                        element={
-                            <div>
-                                Consultorios
-                            </div>
-                        }
-                    />
+                        <Route
+                            path="/medicos"
+                            element={<MedicosPage />}
+                        />
 
-                    <Route
-                        path="/especialidades"
-                        element={<EspecialidadesPage />}
-                    />
+                        <Route
+                            path="/turnos"
+                            element={
+                                <div>
+                                    Turnos
+                                </div>
+                            }
+                        />
 
-                    <Route
-                        path="/recepcion"
-                        element={
-                            <div>
-                                Recepción
-                            </div>
-                        }
-                    />
+                        <Route
+                            path="/consultorios"
+                            element={
+                                <div>
+                                    Consultorios
+                                </div>
+                            }
+                        />
 
-                    <Route
-                        path="/historias-clinicas"
-                        element={
-                            <div>
-                                Historias clínicas
-                            </div>
-                        }
-                    />
+                        <Route
+                            path="/especialidades"
+                            element={<EspecialidadesPage />}
+                        />
+
+                        <Route
+                            path="/recepcion"
+                            element={
+                                <div>
+                                    Recepción
+                                </div>
+                            }
+                        />
+
+                        <Route
+                            path="/historias-clinicas"
+                            element={
+                                <div>
+                                    Historias clínicas
+                                </div>
+                            }
+                        />
+
+                    </Route>
 
                 </Route>
 
+                {/* Ruta inexistente */}
                 <Route
                     path="*"
                     element={<Navigate to="/" replace />}
