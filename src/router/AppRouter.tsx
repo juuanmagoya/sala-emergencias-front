@@ -13,6 +13,8 @@ import LoginPage from "@/pages/auth/LoginPage";
 import PacientesPage from "@/pages/pacientes/PacientesPage";
 import EspecialidadesPage from "@/pages/especialidades/EspecialidadesPage";
 import MedicosPage from "@/pages/medicos/MedicosPage";
+import ConsultoriosPage from "@/pages/consultorios/ConsultoriosPage";
+import TurnosPage from "@/pages/turnos/TurnosPage";
 
 export default function AppRouter() {
     return (
@@ -47,20 +49,12 @@ export default function AppRouter() {
 
                         <Route
                             path="/turnos"
-                            element={
-                                <div>
-                                    Turnos
-                                </div>
-                            }
+                            element={<TurnosPage />}
                         />
 
                         <Route
                             path="/consultorios"
-                            element={
-                                <div>
-                                    Consultorios
-                                </div>
-                            }
+                            element={<ConsultoriosPage />}
                         />
 
                         <Route

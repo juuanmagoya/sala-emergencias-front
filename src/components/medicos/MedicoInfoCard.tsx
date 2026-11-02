@@ -98,12 +98,16 @@ export default function MedicoInfoCard({
         ? `(${medico.telefono.codigoArea}) ${medico.telefono.numero}`
         : "Sin teléfono";
 
+   const horarios = medico.horariosAtencion ?? [];
+
     const horario =
-        medico.horarioAtencion?.dia &&
-        medico.horarioAtencion.horaInicio &&
-        medico.horarioAtencion.horaFin
-            ? `${medico.horarioAtencion.dia} de ${medico.horarioAtencion.horaInicio} a ${medico.horarioAtencion.horaFin}`
-            : "Sin horario configurado";
+        horarios.length > 0
+            ? `${horarios.length} ${
+                horarios.length === 1
+                    ? "horario configurado"
+                    : "horarios configurados"
+            }`
+            : "Sin horarios configurados";
 
     const consultorios =
         medico.consultorios?.length > 0
