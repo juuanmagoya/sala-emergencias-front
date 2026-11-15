@@ -4,14 +4,41 @@ import {
     type ReactNode,
 } from "react";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import type {
     LoginData,
+    LoginPacienteData,
+    PacienteAutenticado,
     Usuario,
 } from "@/types/auth";
 
-import { loginUsuario } from "@/api/auth.api";
+import {
+    loginPaciente as loginPacienteApi,
+    loginUsuario,
+} from "@/api/auth.api";
+
+import {
+    guardarSesion,
+    limpiarSesion,
+    obtenerSesionGuardada,
+    type SesionGuardada,
+} from "@/lib/auth";
 
 import { AuthContext } from "./auth-context";
+
+// Prefijos de las cachés personales del paciente. Se eliminan al
+// cerrar sesión para no conservar datos de una identidad anterior
+// en la misma pestaña.
+const MI_HISTORIAL_QUERY_KEY = [
+    "historias-clinicas",
+    "mi-historial",
+];
+
+const MI_HISTORIAL_TURNOS_QUERY_KEY = [
+    "turnos",
+    "mi-historial",
+];
 
 interface AuthProviderProps {
     children: ReactNode;
@@ -21,27 +48,14 @@ export function AuthProvider({
     children,
 }: AuthProviderProps) {
 
-    const [token, setToken] = useState<string | null>(
-        () => localStorage.getItem("token")
-    );
+    const queryClient = useQueryClient();
 
-    const [usuario, setUsuario] = useState<Usuario | null>(
-        () => {
-            const usuarioGuardado =
-                localStorage.getItem("usuario");
-
-            if (!usuarioGuardado) {
-                return null;
-            }
-
-            try {
-                return JSON.parse(usuarioGuardado);
-            } catch {
-                localStorage.removeItem("usuario");
-                return null;
-            }
-        }
-    );
+    // Token e identidad se guardan juntos para que nunca queden
+    // desincronizados.
+    const [sesion, setSesion] =
+        useState<SesionGuardada | null>(
+            () => obtenerSesionGuardada()
+        );
 
     const login = async (
         credentials: LoginData
@@ -52,28 +66,63 @@ export function AuthProvider({
 
         const { token, usuario } = response.data;
 
-        localStorage.setItem("token", token);
+        const identidad: Usuario = {
+            ...usuario,
+            tipo: "usuario",
+            medico: usuario.medico ?? null,
+        };
 
-        localStorage.setItem(
-            "usuario",
-            JSON.stringify(usuario)
+        guardarSesion(token, identidad);
+        setSesion({ token, identidad });
+    };
+
+    const loginPaciente = async (
+        credentials: LoginPacienteData
+    ) => {
+        const response = await loginPacienteApi(
+            credentials
         );
 
-        setToken(token);
-        setUsuario(usuario);
+        const { token, paciente } = response.data;
+
+        const identidad: PacienteAutenticado = {
+            ...paciente,
+            tipo: "paciente",
+        };
+
+        guardarSesion(token, identidad);
+        setSesion({ token, identidad });
     };
 
     const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("usuario");
+        // La caché de React Query no se limpia automáticamente al
+        // cerrar sesión. Se eliminan los historiales del paciente.
+        queryClient.removeQueries({
+            queryKey: MI_HISTORIAL_QUERY_KEY,
+        });
 
-        setToken(null);
-        setUsuario(null);
+        queryClient.removeQueries({
+            queryKey: MI_HISTORIAL_TURNOS_QUERY_KEY,
+        });
+
+        limpiarSesion();
+        setSesion(null);
     };
 
     useEffect(() => {
         const handleSessionExpired = () => {
-            logout();
+            // Mismo resguardo que en logout(): un 401 también cierra
+            // la sesión y no debe dejar datos personales en memoria.
+            queryClient.removeQueries({
+                queryKey: MI_HISTORIAL_QUERY_KEY,
+            });
+
+            queryClient.removeQueries({
+                queryKey: MI_HISTORIAL_TURNOS_QUERY_KEY,
+            });
+
+            limpiarSesion();
+            setSesion(null);
         };
 
         window.addEventListener(
@@ -87,18 +136,24 @@ export function AuthProvider({
                 handleSessionExpired
             );
         };
-    }, []);
+    }, [queryClient]);
 
-    const isAuthenticated =
-        Boolean(token && usuario);
+    const identidad = sesion?.identidad ?? null;
+
+    // `usuario` conserva la forma que ya consumían el sidebar y las
+    // rutas protegidas. Para un paciente es null.
+    const usuario =
+        identidad?.tipo === "usuario" ? identidad : null;
 
     return (
         <AuthContext.Provider
             value={{
+                identidad,
                 usuario,
-                token,
-                isAuthenticated,
+                token: sesion?.token ?? null,
+                isAuthenticated: Boolean(sesion),
                 login,
+                loginPaciente,
                 logout,
             }}
         >

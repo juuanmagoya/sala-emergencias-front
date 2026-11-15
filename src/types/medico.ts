@@ -107,6 +107,24 @@ export interface Medico {
 }
 
 /**
+ * Médico activo expuesto al portal del paciente.
+ *
+ * La especialidad solo incluye id y nombre. El endpoint no devuelve
+ * datos de contacto, consultorios ni horarios.
+ */
+export interface MedicoDisponible {
+    id: string;
+    nombre: string;
+    apellido: string;
+    matricula: string;
+    especialidad: {
+        id: string;
+        nombre: string;
+    };
+    duracionTurno: number;
+}
+
+/**
  * Datos para crear un médico
  */
 export interface CreateMedicoData {

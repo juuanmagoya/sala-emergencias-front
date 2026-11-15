@@ -9,6 +9,7 @@ import {
     deleteMedicoPermanente,
     getMedico,
     getMedicos,
+    getMedicosDisponibles,
     toggleActivoMedico,
     updateMedico,
     type MedicoFilters,
@@ -40,6 +41,27 @@ export function useMedicos(
 
         queryFn: () =>
             getMedicos(filters),
+    });
+}
+
+// ============================================
+// OBTENER MÉDICOS DISPONIBLES
+// ============================================
+
+export function useMedicosDisponibles(
+    especialidadId: string
+) {
+    return useQuery({
+        queryKey: [
+            ...medicosQueryKey,
+            "disponibles",
+            especialidadId,
+        ],
+
+        queryFn: () =>
+            getMedicosDisponibles(especialidadId),
+
+        enabled: Boolean(especialidadId),
     });
 }
 

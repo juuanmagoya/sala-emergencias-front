@@ -9,6 +9,7 @@ import {
     deleteEspecialidadPermanente,
     getEspecialidad,
     getEspecialidades,
+    getEspecialidadesDisponibles,
     toggleActivoEspecialidad,
     updateEspecialidad,
     type EspecialidadFilters,
@@ -35,6 +36,20 @@ export function useEspecialidades(
 
         queryFn: () =>
             getEspecialidades(filters),
+    });
+}
+
+/**
+ * Obtener especialidades disponibles para el portal del paciente
+ */
+export function useEspecialidadesDisponibles() {
+    return useQuery({
+        queryKey: [
+            ...especialidadesQueryKey,
+            "disponibles",
+        ],
+
+        queryFn: getEspecialidadesDisponibles,
     });
 }
 

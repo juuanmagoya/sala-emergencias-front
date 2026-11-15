@@ -1,7 +1,7 @@
+
 import { NavLink } from "react-router-dom";
 
 import {
-    Activity,
     Building2,
     CalendarDays,
     ChevronLeft,
@@ -17,27 +17,39 @@ import {
 
 import { useSidebar } from "@/contexts/useSidebar";
 import { useAuth } from "@/hooks/useAuth";
+import type { RolUsuario } from "@/types/auth";
 
+// Elementos de navegación y roles autorizados.
 const management = [
     {
         title: "Pacientes",
         icon: Users,
         href: "/pacientes",
+        rolesPermitidos: ["admin", "recepcionista", "medico"],
     },
     {
         title: "Médicos",
         icon: Stethoscope,
         href: "/medicos",
+        rolesPermitidos: ["admin", "recepcionista"],
     },
     {
         title: "Turnos",
         icon: CalendarDays,
         href: "/turnos",
+        rolesPermitidos: ["admin", "recepcionista"],
+    },
+    {
+        title: "Agenda",
+        icon: CalendarDays,
+        href: "/mis-turnos",
+        rolesPermitidos: ["admin", "medico"],
     },
     {
         title: "Consultorios",
         icon: Building2,
         href: "/consultorios",
+        rolesPermitidos: ["admin"],
     },
 ];
 
@@ -46,16 +58,19 @@ const administration = [
         title: "Especialidades",
         icon: ClipboardList,
         href: "/especialidades",
+        rolesPermitidos: ["admin"],
     },
     {
         title: "Recepción",
         icon: HeartPulse,
         href: "/recepcion",
+        rolesPermitidos: ["admin", "recepcionista"],
     },
     {
-        title: "Historias clínicas",
-        icon: Activity,
-        href: "/historias-clinicas",
+        title: "Usuarios",
+        icon: Users,
+        href: "/usuarios",
+        rolesPermitidos: ["admin"],
     },
 ];
 
@@ -112,27 +127,44 @@ function SidebarItem({
 }
 
 export default function Sidebar() {
-    const {
-        collapsed,
-        toggleSidebar,
-    } = useSidebar();
+    const { collapsed, toggleSidebar } = useSidebar();
 
-    const { logout } = useAuth();
+    const { logout, usuario } = useAuth();
+
+    // Filtra los elementos según el rol del usuario.
+    const managementFiltrado = management.filter((item) =>
+        item.rolesPermitidos.includes(usuario?.rol ?? "")
+    );
+
+    const administrationFiltrada = administration.filter((item) =>
+        item.rolesPermitidos.includes(usuario?.rol ?? "")
+    );
+
+    // Convierte el rol técnico en un nombre legible.
+    const nombresRoles: Record<RolUsuario, string> = {
+        admin: "Administrador",
+        recepcionista: "Recepcionista",
+        medico: "Médico",
+    };
+
+    // Obtiene las iniciales del nombre del usuario.
+    const iniciales = usuario?.nombre
+        ?.trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((parte) => parte.charAt(0).toUpperCase())
+        .join("") ?? "";
 
     return (
         <aside
             className={`fixed inset-y-0 left-0 z-40 hidden flex-col bg-slate-950 text-slate-300 transition-all duration-300 lg:flex ${
-                collapsed
-                    ? "w-[76px]"
-                    : "w-[260px]"
+                collapsed ? "w-[76px]" : "w-[260px]"
             }`}
         >
             {/* Header */}
             <div
                 className={`flex h-[72px] items-center border-b border-white/5 ${
-                    collapsed
-                        ? "justify-center px-3"
-                        : "px-5"
+                    collapsed ? "justify-center px-3" : "px-5"
                 }`}
             >
                 <div
@@ -140,15 +172,10 @@ export default function Sidebar() {
                         collapsed ? "" : "gap-3"
                     }`}
                 >
-                    {/* Logo */}
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/20">
-                        <HeartPulse
-                            size={21}
-                            strokeWidth={2.3}
-                        />
+                        <HeartPulse size={21} strokeWidth={2.3} />
                     </div>
 
-                    {/* Nombre */}
                     {!collapsed && (
                         <div className="min-w-0">
                             <p className="text-sm font-semibold tracking-tight text-white">
@@ -162,7 +189,6 @@ export default function Sidebar() {
                     )}
                 </div>
 
-                {/* Botón contraer */}
                 {!collapsed && (
                     <button
                         type="button"
@@ -174,7 +200,6 @@ export default function Sidebar() {
                     </button>
                 )}
 
-                {/* Botón expandir */}
                 {collapsed && (
                     <button
                         type="button"
@@ -191,77 +216,83 @@ export default function Sidebar() {
             <div className="flex-1 overflow-y-auto px-3 py-6">
 
                 {/* Principal */}
-                {!collapsed && (
-                    <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">
-                        Principal
-                    </p>
+                {usuario?.rol === "admin" && (
+                    <>
+                        {!collapsed && (
+                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">
+                                Principal
+                            </p>
+                        )}
+
+                        <nav className="space-y-1">
+                            <SidebarItem
+                                title="Dashboard"
+                                icon={LayoutDashboard}
+                                href="/"
+                                collapsed={collapsed}
+                            />
+                        </nav>
+                    </>
                 )}
 
-                <nav className="space-y-1">
-                    <SidebarItem
-                        title="Dashboard"
-                        icon={LayoutDashboard}
-                        href="/"
-                        collapsed={collapsed}
-                    />
-                </nav>
-
                 {/* Gestión */}
-                <div className="mt-8">
+                {managementFiltrado.length > 0 && (
+                    <div className="mt-8">
+                        {!collapsed && (
+                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">
+                                Gestión
+                            </p>
+                        )}
 
-                    {!collapsed && (
-                        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">
-                            Gestión
-                        </p>
-                    )}
-
-                    <nav className="space-y-1">
-                        {management.map((item) => (
-                            <SidebarItem
-                                key={item.title}
-                                title={item.title}
-                                icon={item.icon}
-                                href={item.href}
-                                collapsed={collapsed}
-                            />
-                        ))}
-                    </nav>
-
-                </div>
+                        <nav className="space-y-1">
+                            {managementFiltrado.map((item) => (
+                                <SidebarItem
+                                    key={item.title}
+                                    title={item.title}
+                                    icon={item.icon}
+                                    href={item.href}
+                                    collapsed={collapsed}
+                                />
+                            ))}
+                        </nav>
+                    </div>
+                )}
 
                 {/* Administración */}
-                <div className="mt-8">
+                {administrationFiltrada.length > 0 && (
+                    <div className="mt-8">
+                        {!collapsed && (
+                            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">
+                                Administración
+                            </p>
+                        )}
 
-                    {!collapsed && (
-                        <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-600">
-                            Administración
-                        </p>
-                    )}
-
-                    <nav className="space-y-1">
-                        {administration.map((item) => (
-                            <SidebarItem
-                                key={item.title}
-                                title={item.title}
-                                icon={item.icon}
-                                href={item.href}
-                                collapsed={collapsed}
-                            />
-                        ))}
-                    </nav>
-
-                </div>
+                        <nav className="space-y-1">
+                            {administrationFiltrada.map((item) => (
+                                <SidebarItem
+                                    key={item.title}
+                                    title={item.title}
+                                    icon={item.icon}
+                                    href={item.href}
+                                    collapsed={collapsed}
+                                />
+                            ))}
+                        </nav>
+                    </div>
+                )}
             </div>
 
             {/* Footer */}
             <div className="border-t border-white/5 p-3">
 
-                <SidebarItem
-                    title="Configuración"
-                    icon={Settings}
-                    href="/configuracion"
-                    collapsed={collapsed}
-                />
+                {usuario?.rol === "admin" && (
+                    <SidebarItem
+                        title="Configuración"
+                        icon={Settings}
+                        href="/configuracion"
+                        collapsed={collapsed}
+                    />
+                )}
 
                 {/* Cerrar sesión */}
                 <button
@@ -286,27 +317,24 @@ export default function Sidebar() {
                     )}
                 </button>
 
-                {/* Usuario */}
-                {!collapsed && (
+                {/* Usuario autenticado */}
+                {!collapsed && usuario && (
                     <div className="mt-3 flex items-center gap-3 rounded-xl bg-white/[0.03] p-3">
-
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-800 text-xs font-semibold text-slate-300">
-                            AD
+                            {iniciales}
                         </div>
 
                         <div className="min-w-0">
                             <p className="truncate text-xs font-medium text-slate-300">
-                                Administrador
+                                {usuario.nombre}
                             </p>
 
                             <p className="truncate text-[10px] text-slate-600">
-                                Sesión activa
+                                {nombresRoles[usuario.rol]}
                             </p>
                         </div>
-
                     </div>
                 )}
-
             </div>
         </aside>
     );
