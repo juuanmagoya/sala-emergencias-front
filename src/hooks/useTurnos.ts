@@ -6,14 +6,23 @@ import {
 } from "@tanstack/react-query";
 
 import {
+    crearMiTurno,
     createTurno,
     deleteTurno,
     getDisponibilidad,
+    getMiHistorialTurnos,
     getMisTurnos,
     getTurnos,
+    updateEstadoTurno,
 } from "@/api/turnos.api";
 
-import type { CrearTurnoData } from "@/types/turno";
+import { useAuth } from "@/hooks/useAuth";
+
+import type {
+    CrearMiTurnoData,
+    CrearTurnoData,
+    EstadoTurno,
+} from "@/types/turno";
 
 // ============================================
 // QUERY KEYS
@@ -29,6 +38,11 @@ const disponibilidadQueryKey = [
 const misTurnosQueryKey = [
     ...turnosQueryKey,
     "mis-turnos",
+];
+
+const miHistorialTurnosQueryKey = [
+    ...turnosQueryKey,
+    "mi-historial",
 ];
 
 // ============================================
@@ -47,9 +61,14 @@ export function useTurnos() {
 // OBTENER DISPONIBILIDAD
 // ============================================
 
+interface UseDisponibilidadOptions {
+    staleTime?: number;
+}
+
 export function useDisponibilidad(
     medicoId: string,
-    fecha: string
+    fecha: string,
+    options?: UseDisponibilidadOptions
 ) {
     return useQuery({
         queryKey: [
@@ -65,6 +84,13 @@ export function useDisponibilidad(
             ),
 
         enabled: Boolean(medicoId && fecha),
+
+        // Sin opciones se conserva el staleTime global del panel
+        // interno. La reserva puede pedir datos frescos con
+        // { staleTime: 0 }.
+        ...(options?.staleTime !== undefined
+            ? { staleTime: options.staleTime }
+            : {}),
     });
 }
 
@@ -77,6 +103,60 @@ export function useMisTurnos() {
         queryKey: misTurnosQueryKey,
 
         queryFn: getMisTurnos,
+    });
+}
+
+// ============================================
+// OBTENER MI HISTORIAL DE TURNOS
+// ============================================
+
+export function useMiHistorialTurnos() {
+    const { identidad } = useAuth();
+
+    const pacienteId =
+        identidad?.tipo === "paciente"
+            ? identidad.id
+            : "";
+
+    return useQuery({
+        // El ID se usa solo para aislar la caché entre sesiones.
+        // No se envía al backend: la identidad sale del JWT.
+        queryKey: [
+            ...miHistorialTurnosQueryKey,
+            pacienteId,
+        ],
+
+        queryFn: getMiHistorialTurnos,
+
+        enabled: Boolean(pacienteId),
+
+        // Información personal: no reutilizar ni retener datos de
+        // consultas anteriores.
+        staleTime: 0,
+        gcTime: 0,
+    });
+}
+
+// ============================================
+// CREAR MI TURNO
+// ============================================
+
+export function useCrearMiTurno() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (datos: CrearMiTurnoData) =>
+            crearMiTurno(datos),
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: disponibilidadQueryKey,
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: miHistorialTurnosQueryKey,
+            });
+        },
     });
 }
 
@@ -111,6 +191,31 @@ export function useDeleteTurno() {
     return useMutation({
         mutationFn: (id: string) =>
             deleteTurno(id),
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: turnosQueryKey,
+            });
+        },
+    });
+}
+
+// ============================================
+// ACTUALIZAR ESTADO DEL TURNO
+// ============================================
+
+export function useUpdateEstadoTurno() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({
+            id,
+            estado,
+        }: {
+            id: string;
+            estado: EstadoTurno;
+        }) =>
+            updateEstadoTurno(id, estado),
 
         onSuccess: () => {
             queryClient.invalidateQueries({

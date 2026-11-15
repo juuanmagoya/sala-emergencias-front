@@ -1,10 +1,10 @@
-
 import {
     CalendarDays,
     CalendarPlus,
     Eye,
     Search,
     Trash2,
+    RotateCcw,
 } from "lucide-react";
 
 import { useState } from "react";
@@ -52,24 +52,83 @@ export default function TurnosPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isCancelOpen, setIsCancelOpen] = useState(false);
-    const [search, setSearch] = useState("");
 
-    // Filtrar turnos por búsqueda
+    // Estados para los filtros
+    const [search, setSearch] = useState("");
+    const [soloHoy, setSoloHoy] = useState(false);
+    const [fechaDesde, setFechaDesde] = useState("");
+    const [fechaHasta, setFechaHasta] = useState("");
+
+    // Obtener una fecha en formato YYYY-MM-DD según Argentina
+    const obtenerFechaLocal = (fecha: string | Date): string => {
+        const partes = new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Argentina/Buenos_Aires",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+        }).formatToParts(new Date(fecha));
+
+        const año = partes.find((parte) => parte.type === "year")?.value;
+        const mes = partes.find((parte) => parte.type === "month")?.value;
+        const dia = partes.find((parte) => parte.type === "day")?.value;
+
+        return `${año}-${mes}-${dia}`;
+    };
+
+    const hoy = obtenerFechaLocal(new Date());
+
+    // Filtrar turnos por búsqueda y fechas
     const filteredTurnos = turnos.filter((turno) => {
         const searchTerm = search.toLowerCase().trim();
 
-        if (!searchTerm) return true;
+        const nombrePaciente =
+            turno.paciente?.nombre?.toLowerCase() ?? "";
 
-        const nombrePaciente = turno.paciente?.nombre?.toLowerCase() ?? "";
-        const nombreMedico = `${turno.medico?.nombre ?? ""} ${turno.medico?.apellido ?? ""}`.toLowerCase();
-        const nombreEspecialidad = turno.especialidad?.nombre?.toLowerCase() ?? "";
+        const nombreMedico =
+            `${turno.medico?.nombre ?? ""} ${turno.medico?.apellido ?? ""}`
+                .toLowerCase();
 
-        return (
+        const nombreEspecialidad =
+            turno.especialidad?.nombre?.toLowerCase() ?? "";
+
+        const coincideBusqueda =
+            !searchTerm ||
             nombrePaciente.includes(searchTerm) ||
             nombreMedico.includes(searchTerm) ||
-            nombreEspecialidad.includes(searchTerm)
+            nombreEspecialidad.includes(searchTerm);
+
+        const fechaTurno = obtenerFechaLocal(turno.fechaTurno);
+
+        const coincideHoy = !soloHoy || fechaTurno === hoy;
+
+        const coincideDesde =
+            !fechaDesde || fechaTurno >= fechaDesde;
+
+        const coincideHasta =
+            !fechaHasta || fechaTurno <= fechaHasta;
+
+        return (
+            coincideBusqueda &&
+            coincideHoy &&
+            coincideDesde &&
+            coincideHasta
         );
     });
+
+    // Limpiar todos los filtros
+    const handleLimpiarFiltros = () => {
+        setSearch("");
+        setSoloHoy(false);
+        setFechaDesde("");
+        setFechaHasta("");
+    };
+
+    // Activar o desactivar filtro de hoy
+    const handleFiltrarHoy = () => {
+        setSoloHoy((actual) => !actual);
+        setFechaDesde("");
+        setFechaHasta("");
+    };
 
     // Handlers
     const handleCreate = () => {
@@ -121,6 +180,7 @@ export default function TurnosPage() {
                         <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
                             Turnos
                         </h1>
+
                         <p className="text-sm text-slate-500">
                             Gestión y administración de turnos médicos
                         </p>
@@ -139,33 +199,147 @@ export default function TurnosPage() {
 
             {/* TABLA */}
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-                {/* Toolbar de búsqueda */}
-                <div className="flex flex-col gap-3 border-b border-slate-200 bg-linear-to-r from-slate-50/80 to-slate-100/80 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="relative w-full max-w-md">
-                        <Search
-                            size={18}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
 
-                        <input
-                            type="text"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Buscar por paciente, médico o especialidad..."
-                            className="w-full rounded-xl border-2 border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
-                        />
+                {/* TOOLBAR DE FILTROS */}
+                <div className="space-y-4 border-b border-slate-200 bg-linear-to-r from-slate-50/80 to-slate-100/80 p-4">
+
+                    {/* Búsqueda y acciones rápidas */}
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="relative w-full lg:max-w-md">
+                            <Search
+                                size={18}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(event) =>
+                                    setSearch(event.target.value)
+                                }
+                                placeholder="Buscar paciente, médico o especialidad..."
+                                className="w-full rounded-xl border-2 border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200 hover:border-slate-300 focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={handleFiltrarHoy}
+                                className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                                    soloHoy
+                                        ? "border-blue-600 bg-blue-600 text-white shadow-md"
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                                }`}
+                            >
+                                <CalendarDays size={17} />
+                                Hoy
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleLimpiarFiltros}
+                                disabled={
+                                    !search &&
+                                    !soloHoy &&
+                                    !fechaDesde &&
+                                    !fechaHasta
+                                }
+                                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition-all hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                                <RotateCcw size={16} />
+                                Limpiar
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-sm">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
-                            {filteredTurnos.length}
-                        </span>
+                    {/* Filtro por rango de fechas */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                        <div className="flex-1">
+                            <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                                Desde
+                            </label>
 
-                        <span className="text-slate-500">resultados</span>
+                            <input
+                                type="date"
+                                value={fechaDesde}
+                                max={fechaHasta || undefined}
+                                onChange={(event) => {
+                                    setFechaDesde(event.target.value);
+                                    setSoloHoy(false);
+                                }}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                        </div>
+
+                        <div className="flex-1">
+                            <label className="mb-1.5 block text-xs font-semibold text-slate-600">
+                                Hasta
+                            </label>
+
+                            <input
+                                type="date"
+                                value={fechaHasta}
+                                min={fechaDesde || undefined}
+                                onChange={(event) => {
+                                    setFechaHasta(event.target.value);
+                                    setSoloHoy(false);
+                                }}
+                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition-all focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                            />
+                        </div>
+
+                        <div className="flex items-center gap-2 pb-2 text-sm text-slate-500 sm:ml-auto">
+                            <span className="inline-flex h-7 min-w-7 items-center justify-center rounded-full bg-blue-100 px-2 text-xs font-bold text-blue-600">
+                                {filteredTurnos.length}
+                            </span>
+
+                            <span>
+                                {filteredTurnos.length === 1
+                                    ? "resultado"
+                                    : "resultados"}
+                            </span>
+                        </div>
                     </div>
+
+                    {/* Indicadores de filtros activos */}
+                    {(soloHoy ||
+                        fechaDesde ||
+                        fechaHasta ||
+                        search.trim()) && (
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                            <span className="font-medium text-slate-500">
+                                Filtros activos:
+                            </span>
+
+                            {soloHoy && (
+                                <span className="rounded-full bg-blue-100 px-3 py-1 font-medium text-blue-700">
+                                    Turnos de hoy
+                                </span>
+                            )}
+
+                            {fechaDesde && (
+                                <span className="rounded-full bg-indigo-100 px-3 py-1 font-medium text-indigo-700">
+                                    Desde: {fechaDesde}
+                                </span>
+                            )}
+
+                            {fechaHasta && (
+                                <span className="rounded-full bg-indigo-100 px-3 py-1 font-medium text-indigo-700">
+                                    Hasta: {fechaHasta}
+                                </span>
+                            )}
+
+                            {search.trim() && (
+                                <span className="rounded-full bg-slate-200 px-3 py-1 font-medium text-slate-700">
+                                    Búsqueda: {search}
+                                </span>
+                            )}
+                        </div>
+                    )}
                 </div>
 
-                {/* Estados de carga */}
+                {/* ESTADOS DE CARGA */}
                 {isLoading && (
                     <div className="p-12 text-center">
                         <div className="inline-flex items-center gap-3 text-sm text-slate-500">
@@ -191,7 +365,7 @@ export default function TurnosPage() {
                     </div>
                 )}
 
-                {/* Tabla o estado vacío */}
+                {/* TABLA O ESTADO VACÍO */}
                 {!isLoading && !isError && (
                     <>
                         {filteredTurnos.length > 0 ? (
@@ -202,7 +376,14 @@ export default function TurnosPage() {
                             />
                         ) : (
                             <EmptyState
-                                search={search}
+                                search={
+                                    search ||
+                                    (soloHoy
+                                        ? "hoy"
+                                        : fechaDesde || fechaHasta
+                                            ? "fechas seleccionadas"
+                                            : "")
+                                }
                                 onCreate={handleCreate}
                             />
                         )}
@@ -230,7 +411,10 @@ export default function TurnosPage() {
                     <div className="sticky top-0 z-10 rounded-t-2xl bg-linear-to-r from-blue-600 to-indigo-600 p-6">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-white">
-                                <CalendarPlus size={24} className="text-blue-200" />
+                                <CalendarPlus
+                                    size={24}
+                                    className="text-blue-200"
+                                />
                                 Nuevo turno
                             </DialogTitle>
 
@@ -258,7 +442,10 @@ export default function TurnosPage() {
                     <div className="sticky top-0 z-10 rounded-t-2xl bg-linear-to-r from-emerald-600 to-teal-600 p-6">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-3 text-2xl font-bold text-white">
-                                <Eye size={24} className="text-emerald-200" />
+                                <Eye
+                                    size={24}
+                                    className="text-emerald-200"
+                                />
                                 Detalle del turno
                             </DialogTitle>
 
@@ -277,12 +464,18 @@ export default function TurnosPage() {
             </Dialog>
 
             {/* CONFIRMAR CANCELACIÓN */}
-            <AlertDialog open={isCancelOpen} onOpenChange={setIsCancelOpen}>
+            <AlertDialog
+                open={isCancelOpen}
+                onOpenChange={setIsCancelOpen}
+            >
                 <AlertDialogContent size="lg" className="p-6">
                     <AlertDialogHeader>
                         <AlertDialogTitle className="flex items-center gap-3 text-xl font-bold text-red-600">
                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
-                                <Trash2 size={20} className="text-red-600" />
+                                <Trash2
+                                    size={20}
+                                    className="text-red-600"
+                                />
                             </div>
 
                             ¿Cancelar turno?

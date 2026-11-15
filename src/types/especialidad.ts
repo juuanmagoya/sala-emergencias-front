@@ -8,6 +8,18 @@ export interface Especialidad {
     updatedAt?: string;
 }
 
+/**
+ * Especialidad activa expuesta al portal del paciente.
+ *
+ * El endpoint no devuelve `activo` ni timestamps.
+ */
+export interface EspecialidadDisponible {
+    id: string;
+    nombre: string;
+    descripcion?: string;
+    codigo?: string;
+}
+
 export interface CreateEspecialidadData {
     nombre: string;
     descripcion?: string;

@@ -3,8 +3,12 @@ import api from "@/api/axios";
 
 import type {
     CrearTurnoData,
+    CrearMiTurnoData,
     Turno,
+    MiTurno,
+    MiTurnoHistorial,
     DisponibilidadTurno,
+    EstadoTurno
 } from "@/types/turno";
 
 // ============================================================
@@ -33,6 +37,22 @@ export interface DisponibilidadResponse {
     message: string;
     total: number;
     data: DisponibilidadTurno;
+}
+
+export interface MiTurnoResponse {
+    success: boolean;
+    timestamp: string;
+    message: string;
+    total: number;
+    data: MiTurno;
+}
+
+export interface MiHistorialTurnosResponse {
+    success: boolean;
+    timestamp: string;
+    message: string;
+    total: number;
+    data: MiTurnoHistorial[];
 }
 
 export interface DeleteTurnoResponse {
@@ -84,9 +104,44 @@ export async function getMisTurnos(): Promise<TurnosResponse> {
     return response.data;
 }
 
+/**
+ * Obtener el historial de turnos del paciente autenticado.
+ *
+ * La identidad se resuelve desde el JWT, por eso no se envían
+ * parámetros ni body.
+ */
+export async function getMiHistorialTurnos(): Promise<MiHistorialTurnosResponse> {
+    const response = await api.get<MiHistorialTurnosResponse>(
+        "/turnos/mi-historial"
+    );
+
+    return response.data;
+}
+
 // ============================================================
 // OPERACIONES
 // ============================================================
+
+/**
+ * Crear un turno para el paciente autenticado
+ */
+export async function crearMiTurno(
+    datos: CrearMiTurnoData
+): Promise<MiTurnoResponse> {
+    // Se construye el body explícitamente para no enviar campos
+    // administrativos ni la identidad del paciente.
+    const response = await api.post<MiTurnoResponse>(
+        "/turnos/mi-turno",
+        {
+            especialidad: datos.especialidad,
+            medico: datos.medico,
+            fechaTurno: datos.fechaTurno,
+            observaciones: datos.observaciones,
+        }
+    );
+
+    return response.data;
+}
 
 /**
  * Crear un turno
@@ -110,6 +165,21 @@ export async function deleteTurno(
 ): Promise<DeleteTurnoResponse> {
     const response = await api.delete<DeleteTurnoResponse>(
         `/turnos/${id}`
+    );
+
+    return response.data;
+}
+
+/**
+ * Actualizar el estado de un turno
+ */
+export async function updateEstadoTurno(
+    id: string,
+    estado: EstadoTurno
+): Promise<TurnoResponse> {
+    const response = await api.patch<TurnoResponse>(
+        `/turnos/${id}/estado`,
+        { estado }
     );
 
     return response.data;

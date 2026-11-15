@@ -2,6 +2,7 @@ import api from "@/api/axios";
 
 import type {
     Especialidad,
+    EspecialidadDisponible,
     CreateEspecialidadData,
     UpdateEspecialidadData,
 } from "@/types/especialidad";
@@ -32,6 +33,17 @@ export async function getEspecialidades(
     >("/especialidades", {
         params: filters,
     });
+
+    return response.data;
+}
+
+/**
+ * Obtener especialidades disponibles para el portal del paciente
+ */
+export async function getEspecialidadesDisponibles() {
+    const response = await api.get<
+        ApiResponse<EspecialidadDisponible[]>
+    >("/especialidades/disponibles");
 
     return response.data;
 }

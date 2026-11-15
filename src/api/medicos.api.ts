@@ -2,6 +2,7 @@ import api from "@/api/axios";
 
 import type {
     Medico,
+    MedicoDisponible,
     CreateMedicoData,
     UpdateMedicoData,
 } from "@/types/medico";
@@ -54,6 +55,21 @@ export async function getMedicos(
         ApiResponse<Medico[]>
     >("/medicos", {
         params: filters,
+    });
+
+    return response.data;
+}
+
+/**
+ * Obtener médicos activos de una especialidad para el portal.
+ */
+export async function getMedicosDisponibles(
+    especialidadId: string
+): Promise<ApiResponse<MedicoDisponible[]>> {
+    const response = await api.get<
+        ApiResponse<MedicoDisponible[]>
+    >("/turnos/medicos-disponibles", {
+        params: { especialidad: especialidadId },
     });
 
     return response.data;
