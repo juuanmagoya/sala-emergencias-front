@@ -26,12 +26,21 @@ export interface DeletePacienteResponse {
     message: string;
 }
 
+export interface PacienteFilters {
+    dni?: string;
+}
+
 /**
- * Obtener todos los pacientes
+ * Obtener pacientes, opcionalmente filtrados por DNI.
  */
-export async function getPacientes(): Promise<PacientesResponse> {
+export async function getPacientes(
+    filters?: PacienteFilters
+): Promise<PacientesResponse> {
     const response = await api.get<PacientesResponse>(
-        "/pacientes"
+        "/pacientes",
+        {
+            params: filters,
+        }
     );
 
     return response.data;

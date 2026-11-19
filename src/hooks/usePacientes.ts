@@ -16,6 +16,8 @@ import type {
     UpdatePacienteData,
 } from "@/types/paciente";
 
+import { esDniValido } from "@/schemas/recepcion.schema";
+
 const pacientesQueryKey = ["pacientes"];
 
 /**
@@ -24,7 +26,29 @@ const pacientesQueryKey = ["pacientes"];
 export function usePacientes() {
     return useQuery({
         queryKey: pacientesQueryKey,
-        queryFn: getPacientes,
+        queryFn: () => getPacientes(),
+    });
+}
+
+/**
+ * Buscar un paciente por DNI.
+ *
+ * La consulta no se ejecuta hasta contar con un DNI válido.
+ */
+export function useBuscarPacientePorDni(dni: string) {
+    const dniNormalizado = dni.trim();
+
+    return useQuery({
+        queryKey: [
+            ...pacientesQueryKey,
+            "busqueda-dni",
+            dniNormalizado,
+        ],
+        queryFn: () =>
+            getPacientes({ dni: dniNormalizado }),
+        enabled: esDniValido(dniNormalizado),
+        staleTime: 0,
+        gcTime: 0,
     });
 }
 

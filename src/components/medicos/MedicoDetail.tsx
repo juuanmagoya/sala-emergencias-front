@@ -54,6 +54,18 @@ export default function MedicoDetail({
 
     const horarios = medico.horariosAtencion ?? [];
 
+    const especialidades = medico.especialidades ?? [];
+
+    const especialidadesTexto =
+        especialidades.length > 0
+            ? especialidades
+                  .map(
+                      (especialidad) =>
+                          especialidad.nombre
+                  )
+                  .join(", ")
+            : "Sin especialidad";
+
     // ============================================
     // RENDER
     // ============================================
@@ -128,8 +140,7 @@ export default function MedicoDetail({
                                 <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
                                     <span className="inline-flex items-center gap-1.5">
                                         <Stethoscope size={15} />
-                                        {medico.especialidad?.nombre ??
-                                            "Sin especialidad"}
+                                        {especialidadesTexto}
                                     </span>
 
                                     <span className="text-slate-300">
@@ -175,11 +186,8 @@ export default function MedicoDetail({
 
                     <InfoCard
                         icon={<Stethoscope size={16} />}
-                        label="Especialidad"
-                        value={
-                            medico.especialidad?.nombre ??
-                            "Sin especialidad"
-                        }
+                        label="Especialidades"
+                        value={especialidadesTexto}
                     />
 
                     <InfoCard
@@ -212,41 +220,50 @@ export default function MedicoDetail({
             <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <SectionHeader
                     icon={<Stethoscope size={17} />}
-                    title="Especialidad"
-                    description="Información de la especialidad médica."
+                    title="Especialidades"
+                    description="Especialidades médicas asignadas."
                 />
 
-                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <InfoCard
-                        icon={<Stethoscope size={16} />}
-                        label="Nombre"
-                        value={
-                            medico.especialidad?.nombre ??
-                            "No especificada"
-                        }
-                    />
+                {especialidades.length === 0 ? (
+                    <p className="mt-5 text-sm text-slate-400">
+                        Sin especialidades asignadas
+                    </p>
+                ) : (
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        {especialidades.map(
+                            (especialidad) => (
+                                <div
+                                    key={especialidad.id}
+                                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            {
+                                                especialidad.nombre
+                                            }
+                                        </p>
 
-                    <InfoCard
-                        icon={<Stethoscope size={16} />}
-                        label="Código"
-                        value={
-                            medico.especialidad?.codigo ??
-                            "Sin código"
-                        }
-                    />
+                                        {especialidad.codigo && (
+                                            <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-500">
+                                                {
+                                                    especialidad.codigo
+                                                }
+                                            </span>
+                                        )}
+                                    </div>
 
-                    {medico.especialidad?.descripcion && (
-                        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                                Descripción
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 text-slate-700">
-                                {medico.especialidad.descripcion}
-                            </p>
-                        </div>
-                    )}
-                </div>
+                                    {especialidad.descripcion && (
+                                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                                            {
+                                                especialidad.descripcion
+                                            }
+                                        </p>
+                                    )}
+                                </div>
+                            )
+                        )}
+                    </div>
+                )}
             </section>
 
             {/* ======================================== */}

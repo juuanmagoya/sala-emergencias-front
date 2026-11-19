@@ -393,34 +393,54 @@ export function EspecialidadMedicoSection({
     errors,
     especialidades,
 }: EspecialidadMedicoSectionProps) {
+    const errorEspecialidades = (
+        errors.especialidades as unknown as
+            | { message?: string }
+            | undefined
+    )?.message;
+
     return (
         <FormSection
             icon={Stethoscope}
-            title="Especialidad"
-            description="Seleccioná la especialidad médica."
+            title="Especialidades"
+            description="Seleccioná al menos una especialidad médica."
             color="purple"
         >
-            <FormSelect
-                id="especialidad"
-                label="Especialidad"
-                required
-                error={errors.especialidad}
-                color="purple"
-                register={register("especialidad")}
-            >
-                <option value="">
-                    Seleccioná una especialidad
-                </option>
+            {especialidades.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                    No hay especialidades activas disponibles.
+                </p>
+            ) : (
+                <div className="grid gap-3 md:grid-cols-2">
+                    {especialidades.map(
+                        (especialidad) => (
+                            <label
+                                key={especialidad.id}
+                                className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-purple-300 hover:bg-purple-50/40"
+                            >
+                                <input
+                                    type="checkbox"
+                                    value={especialidad.id}
+                                    {...register(
+                                        "especialidades"
+                                    )}
+                                    className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                                />
 
-                {especialidades.map((especialidad) => (
-                    <option
-                        key={especialidad.id}
-                        value={especialidad.id}
-                    >
-                        {especialidad.nombre}
-                    </option>
-                ))}
-            </FormSelect>
+                                <span>
+                                    {especialidad.nombre}
+                                </span>
+                            </label>
+                        )
+                    )}
+                </div>
+            )}
+
+            {errorEspecialidades && (
+                <p className="text-xs font-medium text-red-600">
+                    {errorEspecialidades}
+                </p>
+            )}
         </FormSection>
     );
 }

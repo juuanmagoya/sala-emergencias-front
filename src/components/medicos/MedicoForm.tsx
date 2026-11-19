@@ -43,7 +43,7 @@ const defaultValues: MedicoFormData = {
     nombre: "",
     apellido: "",
     matricula: "",
-    especialidad: "",
+    especialidades: [],
     email: "",
 
     telefono: {
@@ -81,7 +81,7 @@ export default function MedicoForm({
 
     const { data: especialidadesData } =
         useEspecialidades({
-            estado: "activos",
+            activo: true,
         });
 
     const especialidades =
@@ -142,10 +142,14 @@ export default function MedicoForm({
 
             matricula: medico.matricula ?? "",
 
-            especialidad:
-                typeof medico.especialidad === "string"
-                    ? medico.especialidad
-                    : medico.especialidad?.id ?? "",
+            especialidades: Array.isArray(
+                medico.especialidades
+            )
+                ? medico.especialidades.map(
+                      (especialidad) =>
+                          especialidad.id
+                  )
+                : [],
 
             email: medico.email ?? "",
 
@@ -225,8 +229,8 @@ export default function MedicoForm({
                 matricula:
                     data.matricula.trim(),
 
-                especialidad:
-                    data.especialidad,
+                especialidades:
+                    data.especialidades,
 
                 email: data.email
                     .trim()

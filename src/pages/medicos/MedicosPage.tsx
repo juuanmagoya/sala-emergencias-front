@@ -165,9 +165,15 @@ export default function MedicosPage() {
                 medico.email
                     ?.toLowerCase() ?? "";
 
-            const especialidad =
-                medico.especialidad?.nombre
-                    ?.toLowerCase() ?? "";
+            const especialidades = (
+                medico.especialidades ?? []
+            )
+                .map((especialidad) =>
+                    `${especialidad.nombre} ${
+                        especialidad.codigo ?? ""
+                    }`.toLowerCase()
+                )
+                .join(" ");
 
             return (
                 nombre.includes(searchTerm) ||
@@ -177,7 +183,7 @@ export default function MedicosPage() {
                 ) ||
                 matricula.includes(searchTerm) ||
                 email.includes(searchTerm) ||
-                especialidad.includes(searchTerm)
+                especialidades.includes(searchTerm)
             );
         });
 

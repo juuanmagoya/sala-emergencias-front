@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { Turno } from "@/types/turno";
+import type { EstadoTurno } from "@/types/turno";
 
 // ============================================
 // COMPONENTE DE INFORMACIÓN
@@ -73,7 +73,7 @@ export function SectionHeader({
 // ESTADO DEL TURNO
 // ============================================
 
-function EstadoBadge({ estado }: { estado: Turno["estado"] }) {
+function EstadoBadge({ estado }: { estado: EstadoTurno }) {
     const estilos = {
         pendiente: "bg-amber-100 text-amber-700",
         atendido: "bg-emerald-100 text-emerald-700",
@@ -121,8 +121,25 @@ function formatearHora(fecha: string): string {
 // COMPONENTE PRINCIPAL
 // ============================================
 
+interface TurnoInfoCardsData {
+    paciente: {
+        nombre: string;
+    };
+    especialidad: {
+        nombre: string;
+    };
+    medico: {
+        nombre: string;
+        apellido: string;
+    };
+    fechaTurno: string;
+    fechaFin: string;
+    estado: EstadoTurno;
+    observaciones?: string | null;
+}
+
 interface TurnoInfoCardsProps {
-    turno: Turno;
+    turno: TurnoInfoCardsData;
 }
 
 export function TurnoInfoCards({ turno }: TurnoInfoCardsProps) {

@@ -79,7 +79,11 @@ export interface Medico {
 
     matricula: string;
 
-    especialidad: MedicoEspecialidad;
+    /**
+     * Especialidades asignadas. Es la única fuente de verdad de la
+     * relación Médico → Especialidad.
+     */
+    especialidades: MedicoEspecialidad[];
 
     email: string;
 
@@ -109,18 +113,18 @@ export interface Medico {
 /**
  * Médico activo expuesto al portal del paciente.
  *
- * La especialidad solo incluye id y nombre. El endpoint no devuelve
- * datos de contacto, consultorios ni horarios.
+ * Las especialidades solo incluyen id y nombre. El endpoint no
+ * devuelve datos de contacto, consultorios ni horarios.
  */
 export interface MedicoDisponible {
     id: string;
     nombre: string;
     apellido: string;
     matricula: string;
-    especialidad: {
+    especialidades: Array<{
         id: string;
         nombre: string;
-    };
+    }>;
     duracionTurno: number;
 }
 
@@ -134,7 +138,7 @@ export interface CreateMedicoData {
 
     matricula: string;
 
-    especialidad: string;
+    especialidades: string[];
 
     email: string;
 
@@ -157,7 +161,7 @@ export interface UpdateMedicoData {
 
     matricula?: string;
 
-    especialidad?: string;
+    especialidades?: string[];
 
     email?: string;
 
