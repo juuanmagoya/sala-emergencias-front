@@ -63,6 +63,7 @@ export function useTurnos() {
 
 interface UseDisponibilidadOptions {
     staleTime?: number;
+    especialidadId?: string;
 }
 
 export function useDisponibilidad(
@@ -75,12 +76,14 @@ export function useDisponibilidad(
             ...disponibilidadQueryKey,
             medicoId,
             fecha,
+            options?.especialidadId ?? null,
         ],
 
         queryFn: () =>
             getDisponibilidad(
                 medicoId,
-                fecha
+                fecha,
+                options?.especialidadId
             ),
 
         enabled: Boolean(medicoId && fecha),

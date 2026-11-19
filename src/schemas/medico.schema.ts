@@ -59,9 +59,23 @@ export const medicoSchema = z.object({
             "La matrícula debe tener entre 6 y 8 dígitos"
         ),
 
-    especialidad: z
-        .string()
-        .min(1, "La especialidad es obligatoria"),
+    especialidades: z
+        .array(
+            z
+                .string()
+                .min(1, "Seleccioná una especialidad")
+        )
+        .min(
+            1,
+            "Debés seleccionar al menos una especialidad"
+        )
+        .refine(
+            (ids) => new Set(ids).size === ids.length,
+            {
+                message:
+                    "No se puede repetir la misma especialidad",
+            }
+        ),
 
     email: z
         .string()

@@ -77,16 +77,26 @@ export async function getTurnos(): Promise<TurnosResponse> {
 }
 
 /**
- * Obtener disponibilidad de un médico para una fecha
+ * Obtener disponibilidad de un médico para una fecha.
+ *
+ * `especialidadId` identifica la especialidad consultada. El backend
+ * verifica que el médico la tenga asignada y (para el portal) activa.
  */
 export async function getDisponibilidad(
     medicoId: string,
-    fecha: string
+    fecha: string,
+    especialidadId?: string
 ): Promise<DisponibilidadResponse> {
     const response = await api.get<DisponibilidadResponse>(
         "/turnos/disponibilidad",
         {
-            params: { medicoId, fecha },
+            params: {
+                medicoId,
+                fecha,
+                ...(especialidadId
+                    ? { especialidad: especialidadId }
+                    : {}),
+            },
         }
     );
 

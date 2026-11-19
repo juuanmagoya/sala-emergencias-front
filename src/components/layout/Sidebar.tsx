@@ -27,6 +27,12 @@ const management = [
         href: "/pacientes",
         rolesPermitidos: ["admin", "recepcionista", "medico"],
     },
+        {
+        title: "Recepción",
+        icon: HeartPulse,
+        href: "/recepcion",
+        rolesPermitidos: ["admin", "recepcionista"],
+    },
     {
         title: "Médicos",
         icon: Stethoscope,
@@ -59,12 +65,6 @@ const administration = [
         icon: ClipboardList,
         href: "/especialidades",
         rolesPermitidos: ["admin"],
-    },
-    {
-        title: "Recepción",
-        icon: HeartPulse,
-        href: "/recepcion",
-        rolesPermitidos: ["admin", "recepcionista"],
     },
     {
         title: "Usuarios",

@@ -44,5 +44,5 @@ export interface EspecialidadFilters {
     nombre?: string;
     codigo?: string;
     id?: string;
-    estado?: "todos" | "activos" | "inactivos";
+    activo?: boolean;
 }

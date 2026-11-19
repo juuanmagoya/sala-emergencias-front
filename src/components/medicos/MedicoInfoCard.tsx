@@ -121,6 +121,26 @@ export default function MedicoInfoCard({
                   .join(", ")
             : "Sin consultorios asignados";
 
+    const especialidades = medico.especialidades ?? [];
+
+    const especialidadesTexto =
+        especialidades.length > 0
+            ? especialidades
+                  .map(
+                      (especialidad) =>
+                          especialidad.nombre
+                  )
+                  .join(", ")
+            : "Sin especialidad";
+
+    const codigos = especialidades
+        .map((especialidad) => especialidad.codigo)
+        .filter(
+            (codigo): codigo is string =>
+                Boolean(codigo)
+        )
+        .join(", ");
+
     return (
         <div className="space-y-6">
             {/* ======================================== */}
@@ -140,8 +160,7 @@ export default function MedicoInfoCard({
                             </h2>
 
                             <p className="mt-1 text-sm text-slate-500">
-                                {medico.especialidad?.nombre ??
-                                    "Sin especialidad"}
+                                {especialidadesTexto}
                             </p>
                         </div>
                     </div>
@@ -183,20 +202,15 @@ export default function MedicoInfoCard({
 
                     <InfoCard
                         icon={<Stethoscope size={16} />}
-                        label="Especialidad"
-                        value={
-                            medico.especialidad?.nombre ??
-                            "Sin especialidad"
-                        }
+                        label="Especialidades"
+                        value={especialidadesTexto}
                     />
 
-                    {medico.especialidad?.codigo && (
+                    {codigos && (
                         <InfoCard
                             icon={<AtSign size={16} />}
-                            label="Código"
-                            value={
-                                medico.especialidad.codigo
-                            }
+                            label="Códigos"
+                            value={codigos}
                         />
                     )}
 

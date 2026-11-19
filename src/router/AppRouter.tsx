@@ -18,6 +18,7 @@ import EspecialidadesPage from "@/pages/especialidades/EspecialidadesPage";
 import MedicosPage from "@/pages/medicos/MedicosPage";
 import ConsultoriosPage from "@/pages/consultorios/ConsultoriosPage";
 import TurnosPage from "@/pages/turnos/TurnosPage";
+import RecepcionPage from "@/pages/recepcion/RecepcionPage";
 import UsuariosPage from "@/pages/usuarios/UsuariosPage";
 import AgendaMedicoPage from "@/pages/agendaMedica/AgendaMedicoPage";
 import PortalInicioPage from "@/pages/portal/PortalInicioPage";
@@ -84,6 +85,15 @@ export default function AppRouter() {
                             />
                         </Route>
 
+
+                        {/* Recepción: administrador y recepcionista */}
+                        <Route element={<ProtectedRoute rolesPermitidos={["admin", "recepcionista"]} />}>
+                            <Route
+                                path="/recepcion"
+                                element={<RecepcionPage />}
+                            />
+                        </Route>
+                        
                         {/* Pacientes: todos los roles */}
                         <Route element={<ProtectedRoute rolesPermitidos={["admin", "recepcionista", "medico"]} />}>
                             <Route
@@ -134,13 +144,6 @@ export default function AppRouter() {
                             />
                         </Route>
 
-                        {/* Recepción: administrador y recepcionista */}
-                        <Route element={<ProtectedRoute rolesPermitidos={["admin", "recepcionista"]} />}>
-                            <Route
-                                path="/recepcion"
-                                element={<div>Recepción</div>}
-                            />
-                        </Route>
 
                     </Route>
                 </Route>

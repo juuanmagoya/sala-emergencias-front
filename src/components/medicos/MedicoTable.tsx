@@ -163,29 +163,39 @@ export default function MedicoTable({
                                     {/* ========================= */}
 
                                     <td className="px-6 py-4">
-                                        <div>
-                                            <p
-                                                className={`text-sm font-medium ${
-                                                    isActive
-                                                        ? "text-slate-700"
-                                                        : "text-slate-400"
-                                                }`}
-                                            >
-                                                {medico.especialidad
-                                                    ?.nombre ??
-                                                    "Sin especialidad"}
-                                            </p>
-
-                                            {medico.especialidad
-                                                ?.codigo && (
-                                                <p className="mt-0.5 text-xs text-slate-400">
-                                                    Código:{" "}
-                                                    {
-                                                        medico
-                                                            .especialidad
-                                                            .codigo
-                                                    }
-                                                </p>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {medico
+                                                .especialidades
+                                                ?.length ? (
+                                                medico.especialidades.map(
+                                                    (
+                                                        especialidad
+                                                    ) => (
+                                                        <span
+                                                            key={
+                                                                especialidad.id
+                                                            }
+                                                            title={
+                                                                especialidad.codigo
+                                                                    ? `Código: ${especialidad.codigo}`
+                                                                    : undefined
+                                                            }
+                                                            className={`inline-flex rounded-lg px-2.5 py-1 text-xs font-medium ${
+                                                                isActive
+                                                                    ? "bg-purple-50 text-purple-700"
+                                                                    : "bg-slate-100 text-slate-500"
+                                                            }`}
+                                                        >
+                                                            {
+                                                                especialidad.nombre
+                                                            }
+                                                        </span>
+                                                    )
+                                                )
+                                            ) : (
+                                                <span className="text-sm text-slate-400">
+                                                    Sin especialidad
+                                                </span>
                                             )}
                                         </div>
                                     </td>

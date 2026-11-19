@@ -129,7 +129,11 @@ export default function TurnosForm({
         return medicos.filter(
             (medico) =>
                 medico.activo &&
-                medico.especialidad?.id === especialidadId
+                medico.especialidades?.some(
+                    (especialidad) =>
+                        especialidad.id ===
+                        especialidadId
+                )
         );
     }, [medicos, especialidadId]);
 
@@ -177,7 +181,8 @@ export default function TurnosForm({
 
     const disponibilidadQuery = useDisponibilidad(
         medicoId,
-        fechaSeleccionada
+        fechaSeleccionada,
+        { especialidadId }
     );
 
     const horariosDisponibles: HorarioDisponible[] =

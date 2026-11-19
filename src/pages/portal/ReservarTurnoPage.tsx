@@ -241,7 +241,11 @@ export default function ReservarTurnoPage() {
 
     const disponibilidadQuery = useDisponibilidad(
         medicoSeleccionado?.id ?? "",
-        fechaSeleccionada
+        fechaSeleccionada,
+        {
+            especialidadId:
+                especialidadSeleccionada?.id ?? "",
+        }
     );
 
     const crearTurnoMutation = useCrearMiTurno();
