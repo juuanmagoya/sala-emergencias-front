@@ -77,3 +77,48 @@ export function formatHoraArgentina(
         timeZone: ZONA_HORARIA_ARGENTINA,
     }).format(date);
 }
+
+/**
+ * Formatea la fecha del header: "Viernes, 20 de noviembre".
+ * No incluye el año.
+ */
+export function formatFechaHeader(
+    value: Date = new Date()
+): string {
+    const texto = new Intl.DateTimeFormat("es-AR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        timeZone: ZONA_HORARIA_ARGENTINA,
+    }).format(value);
+
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+/**
+ * Devuelve el saludo según la hora de Argentina.
+ */
+export function obtenerSaludoHeader(
+    value: Date = new Date()
+): string {
+    const partes = new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        hourCycle: "h23",
+        timeZone: ZONA_HORARIA_ARGENTINA,
+    }).formatToParts(value);
+
+    const hora = Number(
+        partes.find((parte) => parte.type === "hour")
+            ?.value ?? "0"
+    );
+
+    if (hora >= 6 && hora < 12) {
+        return "Buenos días";
+    }
+
+    if (hora >= 12 && hora < 20) {
+        return "Buenas tardes";
+    }
+
+    return "Buenas noches";
+}
