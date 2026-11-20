@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 
 import Sidebar from "@/components/layout/Sidebar";
+import MobileSidebar from "@/components/layout/MobileSidebar";
 import Header from "@/components/layout/Header";
 
 import { SidebarProvider } from "@/contexts/SidebarProvider";
@@ -13,6 +14,8 @@ function DashboardLayoutContent() {
         <div className="min-h-screen bg-slate-50">
 
             <Sidebar />
+
+            <MobileSidebar />
 
             <div
                 className={`min-h-screen transition-all duration-300 ${
