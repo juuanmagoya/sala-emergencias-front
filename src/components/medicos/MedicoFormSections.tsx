@@ -1,14 +1,12 @@
+
 import {
     Stethoscope,
     User,
     Phone,
     Clock,
-    Plus,
-    Trash2,
 } from "lucide-react";
 
 import type {
-    FieldArrayWithId,
     FieldErrors,
     UseFormRegister,
     UseFormRegisterReturn,
@@ -21,6 +19,10 @@ import type {
 } from "react";
 
 import type { MedicoFormData } from "@/schemas/medico.schema";
+
+import HorarioSemanal, {
+    type HorarioAtencion,
+} from "@/components/medicos/HorarioSemanal";
 
 // ============================================
 // TIPOS Y CONSTANTES
@@ -74,17 +76,13 @@ interface FormSectionFieldsProps {
 // HORARIOS
 // ============================================
 
-type HorarioField = FieldArrayWithId<
-    MedicoFormData,
-    "horariosAtencion",
-    "id"
->;
-
 interface HorarioMedicoSectionProps
     extends FormSectionFieldsProps {
-    fields: HorarioField[];
-    onAdd: () => void;
-    onRemove: (index: number) => void;
+    horarios: HorarioAtencion[];
+    onHorariosChange: (
+        horarios: HorarioAtencion[]
+    ) => void;
+    resetKey: number;
 }
 
 // ============================================
@@ -214,18 +212,13 @@ export function FormInput({
             <label
                 htmlFor={id}
                 className={`text-sm ${
-                    required
-                        ? "font-semibold"
-                        : "font-medium"
+                    required ? "font-semibold" : "font-medium"
                 } ${styles.label}`}
             >
                 {label}
 
                 {required && (
-                    <span className="text-red-500">
-                        {" "}
-                        *
-                    </span>
+                    <span className="text-red-500"> *</span>
                 )}
             </label>
 
@@ -234,9 +227,7 @@ export function FormInput({
                 {...register}
                 {...props}
                 className={`w-full rounded-xl border-2 bg-white px-4 py-3 text-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:ring-2 focus:ring-offset-1 ${
-                    error
-                        ? errorStyles
-                        : styles.input
+                    error ? errorStyles : styles.input
                 }`}
             />
 
@@ -274,18 +265,13 @@ export function FormSelect({
             <label
                 htmlFor={id}
                 className={`text-sm ${
-                    required
-                        ? "font-semibold"
-                        : "font-medium"
+                    required ? "font-semibold" : "font-medium"
                 } ${styles.label}`}
             >
                 {label}
 
                 {required && (
-                    <span className="text-red-500">
-                        {" "}
-                        *
-                    </span>
+                    <span className="text-red-500"> *</span>
                 )}
             </label>
 
@@ -294,9 +280,7 @@ export function FormSelect({
                 {...register}
                 {...props}
                 className={`w-full rounded-xl border-2 bg-white px-4 py-3 text-sm outline-none transition-all duration-200 focus:ring-2 focus:ring-offset-1 ${
-                    error
-                        ? errorStyles
-                        : styles.input
+                    error ? errorStyles : styles.input
                 }`}
             >
                 {children}
@@ -412,27 +396,21 @@ export function EspecialidadMedicoSection({
                 </p>
             ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                    {especialidades.map(
-                        (especialidad) => (
-                            <label
-                                key={especialidad.id}
-                                className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-purple-300 hover:bg-purple-50/40"
-                            >
-                                <input
-                                    type="checkbox"
-                                    value={especialidad.id}
-                                    {...register(
-                                        "especialidades"
-                                    )}
-                                    className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                                />
+                    {especialidades.map((especialidad) => (
+                        <label
+                            key={especialidad.id}
+                            className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 transition-colors hover:border-purple-300 hover:bg-purple-50/40"
+                        >
+                            <input
+                                type="checkbox"
+                                value={especialidad.id}
+                                {...register("especialidades")}
+                                className="h-4 w-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                            />
 
-                                <span>
-                                    {especialidad.nombre}
-                                </span>
-                            </label>
-                        )
-                    )}
+                            <span>{especialidad.nombre}</span>
+                        </label>
+                    ))}
                 </div>
             )}
 
@@ -469,17 +447,9 @@ export function TelefonoMedicoSection({
                     color="green"
                     register={register("telefono.tipo")}
                 >
-                    <option value="CELULAR">
-                        Celular
-                    </option>
-
-                    <option value="FIJO">
-                        Fijo
-                    </option>
-
-                    <option value="TRABAJO">
-                        Trabajo
-                    </option>
+                    <option value="CELULAR">Celular</option>
+                    <option value="FIJO">Fijo</option>
+                    <option value="TRABAJO">Trabajo</option>
                 </FormSelect>
 
                 <FormInput
@@ -488,9 +458,7 @@ export function TelefonoMedicoSection({
                     required
                     error={errors.telefono?.codigoArea}
                     color="green"
-                    register={register(
-                        "telefono.codigoArea"
-                    )}
+                    register={register("telefono.codigoArea")}
                     placeholder="Ej. 3777"
                     inputMode="numeric"
                     maxLength={5}
@@ -502,9 +470,7 @@ export function TelefonoMedicoSection({
                     required
                     error={errors.telefono?.numero}
                     color="green"
-                    register={register(
-                        "telefono.numero"
-                    )}
+                    register={register("telefono.numero")}
                     placeholder="Ej. 123456"
                     inputMode="numeric"
                     maxLength={10}
@@ -521,9 +487,9 @@ export function TelefonoMedicoSection({
 export function HorarioMedicoSection({
     register,
     errors,
-    fields,
-    onAdd,
-    onRemove,
+    horarios,
+    onHorariosChange,
+    resetKey,
 }: HorarioMedicoSectionProps) {
     return (
         <FormSection
@@ -533,10 +499,7 @@ export function HorarioMedicoSection({
             color="orange"
         >
             <div className="space-y-6">
-
-                {/* ================================== */}
-                {/* DURACIÓN DEL TURNO */}
-                {/* ================================== */}
+                {/* Duración del turno */}
 
                 <div className="rounded-xl border border-orange-200 bg-white/70 p-5">
                     <div className="max-w-xs">
@@ -546,12 +509,9 @@ export function HorarioMedicoSection({
                             required
                             error={errors.duracionTurno}
                             color="orange"
-                            register={register(
-                                "duracionTurno",
-                                {
-                                    valueAsNumber: true,
-                                }
-                            )}
+                            register={register("duracionTurno", {
+                                valueAsNumber: true,
+                            })}
                             type="number"
                             min={5}
                             max={240}
@@ -560,160 +520,27 @@ export function HorarioMedicoSection({
                         />
 
                         <p className="mt-2 text-xs text-slate-500">
-                            Indicá la duración en minutos.
-                            Por ejemplo: 30, 45 o 60.
+                            Indicá la duración en minutos. Por ejemplo:
+                            30, 45 o 60.
                         </p>
                     </div>
                 </div>
 
-                {/* ================================== */}
-                {/* LISTA DE HORARIOS */}
-                {/* ================================== */}
+                {/* Configuración semanal */}
 
-                <div className="space-y-4">
+                <HorarioSemanal
+                    value={horarios}
+                    onChange={onHorariosChange}
+                    resetKey={resetKey}
+                />
 
-                    {fields.map((field, index) => {
-                        const horarioErrors =
-                            errors.horariosAtencion?.[index];
+                {/* Error de validación */}
 
-                        return (
-                            <div
-                                key={field.id}
-                                className="rounded-xl border border-orange-200 bg-white p-5 shadow-sm"
-                            >
-                                <div className="mb-4 flex items-center justify-between">
-                                    <div>
-                                        <h3 className="text-sm font-semibold text-orange-900">
-                                            Horario{" "}
-                                            {index + 1}
-                                        </h3>
-
-                                        <p className="text-xs text-orange-600">
-                                            Configurá el período de atención.
-                                        </p>
-                                    </div>
-
-                                    {fields.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                onRemove(
-                                                    index
-                                                )
-                                            }
-                                            className="flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
-                                        >
-                                            <Trash2
-                                                size={15}
-                                            />
-
-                                            Eliminar
-                                        </button>
-                                    )}
-                                </div>
-
-                                <div className="grid gap-5 md:grid-cols-3">
-                                    <FormSelect
-                                        id={`horariosAtencion.${index}.dia`}
-                                        label="Día"
-                                        required
-                                        error={
-                                            horarioErrors?.dia
-                                        }
-                                        color="orange"
-                                        register={register(
-                                            `horariosAtencion.${index}.dia`
-                                        )}
-                                    >
-                                        <option value="">
-                                            Seleccioná un día
-                                        </option>
-
-                                        <option value="LUNES">
-                                            Lunes
-                                        </option>
-
-                                        <option value="MARTES">
-                                            Martes
-                                        </option>
-
-                                        <option value="MIERCOLES">
-                                            Miércoles
-                                        </option>
-
-                                        <option value="JUEVES">
-                                            Jueves
-                                        </option>
-
-                                        <option value="VIERNES">
-                                            Viernes
-                                        </option>
-
-                                        <option value="SABADO">
-                                            Sábado
-                                        </option>
-                                    </FormSelect>
-
-                                    <FormInput
-                                        id={`horariosAtencion.${index}.horaInicio`}
-                                        label="Hora de inicio"
-                                        required
-                                        error={
-                                            horarioErrors?.horaInicio
-                                        }
-                                        color="orange"
-                                        register={register(
-                                            `horariosAtencion.${index}.horaInicio`
-                                        )}
-                                        type="time"
-                                    />
-
-                                    <FormInput
-                                        id={`horariosAtencion.${index}.horaFin`}
-                                        label="Hora de finalización"
-                                        required
-                                        error={
-                                            horarioErrors?.horaFin
-                                        }
-                                        color="orange"
-                                        register={register(
-                                            `horariosAtencion.${index}.horaFin`
-                                        )}
-                                        type="time"
-                                    />
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* ================================== */}
-                {/* AGREGAR HORARIO */}
-                {/* ================================== */}
-
-                <button
-                    type="button"
-                    onClick={onAdd}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-orange-300 px-4 py-3 text-sm font-semibold text-orange-700 transition-all hover:border-orange-400 hover:bg-orange-50"
-                >
-                    <Plus size={18} />
-
-                    Agregar otro horario
-                </button>
-
-                {/* ================================== */}
-                {/* INFORMACIÓN */}
-                {/* ================================== */}
-
-                <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-                    <p className="text-xs leading-relaxed text-orange-800">
-                        <strong>Ejemplo:</strong> un médico
-                        puede atender los lunes de 08:00 a
-                        12:00 y nuevamente de 16:00 a 20:00.
-                        También podés agregar diferentes
-                        horarios para cada día.
+                {errors.horariosAtencion?.message && (
+                    <p className="text-sm font-medium text-red-600">
+                        {errors.horariosAtencion.message}
                     </p>
-                </div>
+                )}
             </div>
         </FormSection>
     );
