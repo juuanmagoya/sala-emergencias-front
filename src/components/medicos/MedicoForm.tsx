@@ -1,5 +1,6 @@
-import { useEffect } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Save, X } from "lucide-react";
@@ -52,13 +53,7 @@ const defaultValues: MedicoFormData = {
         numero: "",
     },
 
-    horariosAtencion: [
-        {
-            dia: "LUNES",
-            horaInicio: "",
-            horaFin: "",
-        },
-    ],
+    horariosAtencion: [],
 
     duracionTurno: 30,
 };
@@ -79,13 +74,11 @@ export default function MedicoForm({
     // ESPECIALIDADES
     // ============================================
 
-    const { data: especialidadesData } =
-        useEspecialidades({
-            activo: true,
-        });
+    const { data: especialidadesData } = useEspecialidades({
+        activo: true,
+    });
 
-    const especialidades =
-        especialidadesData?.data ?? [];
+    const especialidades = especialidadesData?.data ?? [];
 
     // ============================================
     // ESTADO
@@ -97,6 +90,10 @@ export default function MedicoForm({
         createMutation.isPending ||
         updateMutation.isPending;
 
+    // Se incrementa después de cargar/resetear los datos
+    // para sincronizar el componente de horarios.
+    const [scheduleResetKey, setScheduleResetKey] = useState(0);
+
     // ============================================
     // FORMULARIO
     // ============================================
@@ -105,25 +102,17 @@ export default function MedicoForm({
         register,
         handleSubmit,
         reset,
-        control,
+        watch,
+        setValue,
         formState: { errors },
     } = useForm<MedicoFormData>({
         resolver: zodResolver(medicoSchema),
         defaultValues,
     });
 
-    // ============================================
-    // HORARIOS DINÁMICOS
-    // ============================================
-
-    const {
-        fields: horariosFields,
-        append: appendHorario,
-        remove: removeHorario,
-    } = useFieldArray({
-        control,
-        name: "horariosAtencion",
-    });
+    // Observamos los horarios para mantener sincronizada
+    // la interfaz semanal con React Hook Form.
+    const horariosAtencion = watch("horariosAtencion") ?? [];
 
     // ============================================
     // CARGAR DATOS EN EDICIÓN
@@ -132,6 +121,7 @@ export default function MedicoForm({
     useEffect(() => {
         if (!medico) {
             reset(defaultValues);
+            setScheduleResetKey((previous) => previous + 1);
             return;
         }
 
@@ -142,70 +132,47 @@ export default function MedicoForm({
 
             matricula: medico.matricula ?? "",
 
-            especialidades: Array.isArray(
-                medico.especialidades
-            )
+            especialidades: Array.isArray(medico.especialidades)
                 ? medico.especialidades.map(
-                      (especialidad) =>
-                          especialidad.id
+                      (especialidad) => especialidad.id
                   )
                 : [],
 
             email: medico.email ?? "",
 
             telefono: {
-                tipo:
-                    medico.telefono?.tipo ??
-                    "CELULAR",
+                tipo: medico.telefono?.tipo ?? "CELULAR",
 
-                codigoArea:
-                    medico.telefono?.codigoArea ??
-                    "",
+                codigoArea: medico.telefono?.codigoArea ?? "",
 
-                numero:
-                    medico.telefono?.numero ??
-                    "",
+                numero: medico.telefono?.numero ?? "",
             },
 
-            horariosAtencion:
-                medico.horariosAtencion?.length
-                    ? medico.horariosAtencion.map(
-                          (horario) => ({
-                              dia:
-                                  horario.dia ??
-                                  "LUNES",
+            horariosAtencion: medico.horariosAtencion?.length
+                ? medico.horariosAtencion.map((horario) => ({
+                      dia: horario.dia ?? "LUNES",
+                      horaInicio: horario.horaInicio ?? "",
+                      horaFin: horario.horaFin ?? "",
+                  }))
+                : [],
 
-                              horaInicio:
-                                  horario.horaInicio ??
-                                  "",
-
-                              horaFin:
-                                  horario.horaFin ??
-                                  "",
-                          })
-                      )
-                    : [
-                          {
-                              dia: "LUNES",
-                              horaInicio: "",
-                              horaFin: "",
-                          },
-                      ],
-
-            duracionTurno:
-                medico.duracionTurno ?? 30,
+            duracionTurno: medico.duracionTurno ?? 30,
         });
+
+        setScheduleResetKey((previous) => previous + 1);
     }, [medico, reset]);
 
     // ============================================
-    // AGREGAR HORARIO
+    // ACTUALIZAR HORARIOS
     // ============================================
 
-    const handleAgregarHorario = () => {
-        appendHorario({
-            dia: "LUNES",
-            horaInicio: "",
-            horaFin: "",
+    const handleHorariosChange = (
+        horarios: MedicoFormData["horariosAtencion"]
+    ) => {
+        setValue("horariosAtencion", horarios, {
+            shouldValidate: true,
+            shouldDirty: true,
+            shouldTouch: true,
         });
     };
 
@@ -213,53 +180,32 @@ export default function MedicoForm({
     // SUBMIT
     // ============================================
 
-    const onSubmit = async (
-        data: MedicoFormData
-    ) => {
+    const onSubmit = async (data: MedicoFormData) => {
         try {
             const dataToSend = {
-                nombre: data.nombre
-                    .toUpperCase()
-                    .trim(),
+                nombre: data.nombre.toUpperCase().trim(),
 
-                apellido: data.apellido
-                    .toUpperCase()
-                    .trim(),
+                apellido: data.apellido.toUpperCase().trim(),
 
-                matricula:
-                    data.matricula.trim(),
+                matricula: data.matricula.trim(),
 
-                especialidades:
-                    data.especialidades,
+                especialidades: data.especialidades,
 
-                email: data.email
-                    .trim()
-                    .toLowerCase(),
+                email: data.email.trim().toLowerCase(),
 
                 telefono: {
-                    tipo:
-                        data.telefono.tipo,
-
-                    codigoArea:
-                        data.telefono.codigoArea.trim(),
-
-                    numero:
-                        data.telefono.numero.trim(),
+                    tipo: data.telefono.tipo,
+                    codigoArea: data.telefono.codigoArea.trim(),
+                    numero: data.telefono.numero.trim(),
                 },
 
-                horariosAtencion:
-                    data.horariosAtencion.map(
-                        (horario) => ({
-                            dia: horario.dia,
-                            horaInicio:
-                                horario.horaInicio,
-                            horaFin:
-                                horario.horaFin,
-                        })
-                    ),
+                horariosAtencion: data.horariosAtencion.map((horario) => ({
+                    dia: horario.dia,
+                    horaInicio: horario.horaInicio,
+                    horaFin: horario.horaFin,
+                })),
 
-                duracionTurno:
-                    data.duracionTurno,
+                duracionTurno: data.duracionTurno,
             };
 
             console.log(
@@ -277,13 +223,9 @@ export default function MedicoForm({
                     medico: dataToSend,
                 });
 
-                toast.success(
-                    "Médico actualizado correctamente",
-                    {
-                        description:
-                            `${data.nombre} ${data.apellido} fue actualizado correctamente.`,
-                    }
-                );
+                toast.success("Médico actualizado correctamente", {
+                    description: `${data.nombre} ${data.apellido} fue actualizado correctamente.`,
+                });
             }
 
             // ========================================
@@ -291,26 +233,16 @@ export default function MedicoForm({
             // ========================================
 
             else {
-                await createMutation.mutateAsync(
-                    dataToSend
-                );
+                await createMutation.mutateAsync(dataToSend);
 
-                toast.success(
-                    "Médico creado correctamente",
-                    {
-                        description:
-                            `${data.nombre} ${data.apellido} fue registrado en el sistema.`,
-                    }
-                );
+                toast.success("Médico creado correctamente", {
+                    description: `${data.nombre} ${data.apellido} fue registrado en el sistema.`,
+                });
             }
 
             onSuccess?.();
-
         } catch (error: unknown) {
-            console.error(
-                "Error al guardar médico:",
-                error
-            );
+            console.error("Error al guardar médico:", error);
 
             let errorMessage =
                 "Ocurrió un error al comunicarse con el servidor.";
@@ -321,31 +253,22 @@ export default function MedicoForm({
                 typeof error === "object" &&
                 error !== null
             ) {
-                const apiError =
-                    error as {
-                        response?: {
-                            data?: {
-                                message?: string;
-                                error?: string;
-                                data?:
-                                    | string[]
-                                    | string;
-                            };
+                const apiError = error as {
+                    response?: {
+                        data?: {
+                            message?: string;
+                            error?: string;
+                            data?: string[] | string;
                         };
                     };
+                };
 
-                const backendData =
-                    apiError.response?.data;
+                const backendData = apiError.response?.data;
 
                 if (backendData?.data) {
-                    errorMessage =
-                        Array.isArray(
-                            backendData.data
-                        )
-                            ? backendData.data.join(
-                                  ", "
-                              )
-                            : backendData.data;
+                    errorMessage = Array.isArray(backendData.data)
+                        ? backendData.data.join(", ")
+                        : backendData.data;
                 } else {
                     errorMessage =
                         backendData?.message ||
@@ -359,8 +282,7 @@ export default function MedicoForm({
                     ? "No se pudo actualizar el médico"
                     : "No se pudo crear el médico",
                 {
-                    description:
-                        errorMessage,
+                    description: errorMessage,
                 }
             );
         }
@@ -382,7 +304,7 @@ export default function MedicoForm({
                 errors={errors}
             />
 
-            {/* Especialidad */}
+            {/* Especialidades */}
 
             <EspecialidadMedicoSection
                 register={register}
@@ -402,9 +324,9 @@ export default function MedicoForm({
             <HorarioMedicoSection
                 register={register}
                 errors={errors}
-                fields={horariosFields}
-                onAdd={handleAgregarHorario}
-                onRemove={removeHorario}
+                horarios={horariosAtencion}
+                onHorariosChange={handleHorariosChange}
+                resetKey={scheduleResetKey}
             />
 
             {/* Acciones */}
