@@ -39,7 +39,9 @@ export function PacienteTable({ pacientes, onView, onEdit, onDelete }: PacienteT
                                     </div>
                                     <div>
                                         <p className="font-medium text-slate-900">{paciente.nombre}</p>
-                                        <p className="text-xs text-slate-400">{paciente.email}</p>
+                                        <p className="text-xs text-slate-400">
+                                            {paciente.email || "Sin correo registrado"}
+                                        </p>
                                     </div>
                                 </div>
                             </td>
@@ -122,7 +124,7 @@ export function EmptyState({ search, onCreate }: { search: string; onCreate: () 
             </p>
             <p className="mt-1 text-sm text-slate-400">
                 {search
-                    ? "Probá con otro nombre, DNI o correo electrónico."
+                    ? "Probá con otro nombre, DNI, teléfono o correo electrónico."
                     : "Los pacientes aparecerán aquí cuando sean registrados."}
             </p>
             {!search && (

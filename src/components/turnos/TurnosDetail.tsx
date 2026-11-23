@@ -80,6 +80,9 @@ export default function TurnosDetail({ turno }: TurnosDetailProps) {
     const nombreMedico =
         `Dr. ${turno.medico.nombre} ${turno.medico.apellido}`;
 
+    const emailPaciente =
+        turno.paciente.email || "Sin correo registrado";
+
     return (
         <div className="space-y-6">
 
@@ -108,7 +111,7 @@ export default function TurnosDetail({ turno }: TurnosDetailProps) {
 
                             <span className="inline-flex items-center gap-1.5">
                                 <Mail className="h-4 w-4" />
-                                {turno.paciente.email}
+                                {emailPaciente}
                             </span>
                         </div>
                     </div>
@@ -164,7 +167,7 @@ export default function TurnosDetail({ turno }: TurnosDetailProps) {
                     <InfoCard
                         icon={<Mail className="h-4 w-4" />}
                         label="Correo electrónico"
-                        value={turno.paciente.email}
+                        value={emailPaciente}
                     />
 
                     <InfoCard

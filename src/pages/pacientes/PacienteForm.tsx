@@ -93,13 +93,13 @@ export default function PacienteForm({
         reset({
             nombre: paciente.nombre,
             dni: paciente.dni,
-            email: paciente.email,
+            email: paciente.email ?? "",
             direccion: {
-                calle: paciente.direccion.calle,
-                numero: paciente.direccion.numero,
-                piso: paciente.direccion.piso ?? "",
-                departamento: paciente.direccion.departamento ?? "",
-                barrio: paciente.direccion.barrio ?? "",
+                calle: paciente.direccion?.calle ?? "",
+                numero: paciente.direccion?.numero ?? "",
+                piso: paciente.direccion?.piso ?? "",
+                departamento: paciente.direccion?.departamento ?? "",
+                barrio: paciente.direccion?.barrio ?? "",
             },
             telefono: {
                 tipo: paciente.telefono.tipo ?? "CELULAR",
@@ -119,18 +119,31 @@ export default function PacienteForm({
 
     const onSubmit: SubmitHandler<PacienteFormData> = async (data) => {
         try {
-            // Normalizar datos antes de enviar al backend
+            // Normalizar datos antes de enviar al backend. Los campos
+            // opcionales vacíos se omiten para no enviar valores inválidos.
+            const direccion = data.direccion
+                ? {
+                    calle: data.direccion.calle.trim(),
+                    numero: data.direccion.numero.trim(),
+                    ...(data.direccion.piso.trim()
+                        ? { piso: data.direccion.piso.trim() }
+                        : {}),
+                    ...(data.direccion.departamento.trim()
+                        ? { departamento: data.direccion.departamento.trim() }
+                        : {}),
+                    ...(data.direccion.barrio.trim()
+                        ? { barrio: data.direccion.barrio.trim() }
+                        : {}),
+                }
+                : undefined;
+
             const dataToSend = {
                 nombre: data.nombre.toUpperCase().trim(),
                 dni: data.dni.trim(),
-                email: data.email.toLowerCase().trim(),
-                direccion: {
-                    calle: data.direccion.calle.trim(),
-                    numero: data.direccion.numero.trim(),
-                    piso: data.direccion.piso.trim(),
-                    departamento: data.direccion.departamento.trim(),
-                    barrio: data.direccion.barrio.trim(),
-                },
+                ...(data.email
+                    ? { email: data.email.toLowerCase().trim() }
+                    : {}),
+                ...(direccion ? { direccion } : {}),
                 telefono: {
                     tipo: data.telefono.tipo,
                     codigoArea: data.telefono.codigoArea.trim(),

@@ -235,8 +235,7 @@ export function InformacionPersonalSection({ register, errors }: FormSectionFiel
                 
                 <FormInput
                     id="email"
-                    label="Correo electrónico"
-                    required
+                    label="Correo electrónico (opcional)"
                     error={errors.email}
                     color="blue"
                     register={register("email")}
@@ -253,14 +252,13 @@ export function DireccionSection({ register, errors }: FormSectionFieldsProps) {
         <FormSection
             icon={MapPin}
             title="Dirección"
-            description="Información del domicilio del paciente."
+            description="Opcional. Si cargás un domicilio, calle y número son obligatorios."
             color="emerald"
         >
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 <FormInput
                     id="calle"
                     label="Calle"
-                    required
                     error={errors.direccion?.calle}
                     color="emerald"
                     register={register("direccion.calle")}
@@ -271,7 +269,6 @@ export function DireccionSection({ register, errors }: FormSectionFieldsProps) {
                 <FormInput
                     id="numero"
                     label="Número"
-                    required
                     error={errors.direccion?.numero}
                     color="emerald"
                     register={register("direccion.numero")}

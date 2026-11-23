@@ -18,7 +18,7 @@ import type {
 
 import { esDniValido } from "@/schemas/recepcion.schema";
 
-const pacientesQueryKey = ["pacientes"];
+export const pacientesQueryKey = ["pacientes"];
 
 /**
  * Obtener pacientes
