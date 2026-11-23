@@ -21,9 +21,13 @@ export default function PacienteDetail({ paciente }: PacienteDetailProps) {
         ? `${paciente.telefono.codigoArea} ${paciente.telefono.numero}`
         : "No registrado";
 
+    const email = paciente.email || "Sin correo registrado";
+
     const direccion = paciente.direccion
-        ? [paciente.direccion.calle, paciente.direccion.numero].filter(Boolean).join(" ")
-        : "No registrada";
+        ? [paciente.direccion.calle, paciente.direccion.numero]
+            .filter(Boolean)
+            .join(" ") || "Sin dirección registrada"
+        : "Sin dirección registrada";
 
     const ubicacion = [
         paciente.direccion?.barrio,
@@ -55,7 +59,7 @@ export default function PacienteDetail({ paciente }: PacienteDetailProps) {
                             </span>
                             <span className="inline-flex items-center gap-1.5">
                                 <Mail className="h-4 w-4" />
-                                {paciente.email}
+                                {email}
                             </span>
                         </div>
                     </div>
@@ -70,7 +74,7 @@ export default function PacienteDetail({ paciente }: PacienteDetailProps) {
                     description="Datos utilizados para contactar al paciente."
                 />
                 <div className="grid gap-3 sm:grid-cols-2">
-                    <InfoCard icon={<Mail className="h-4 w-4" />} label="Correo electrónico" value={paciente.email} />
+                    <InfoCard icon={<Mail className="h-4 w-4" />} label="Correo electrónico" value={email} />
                     <InfoCard icon={<Phone className="h-4 w-4" />} label="Teléfono" value={telefono} />
                 </div>
             </section>

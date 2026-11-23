@@ -39,8 +39,8 @@ export interface Paciente {
     id: string;
     nombre: string;
     dni: string;
-    direccion: Direccion;
-    email: string;
+    direccion?: Direccion;
+    email?: string;
     telefono: Telefono;
     obraSocial: ObraSocial;
     createdAt?: string;

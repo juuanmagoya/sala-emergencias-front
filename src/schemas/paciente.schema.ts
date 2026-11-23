@@ -1,5 +1,62 @@
 import { z } from "zod";
 
+const emailSchema = z
+    .string()
+    .trim()
+    .optional()
+    .transform((valor) => (valor ? valor : undefined))
+    .pipe(
+        z
+            .string()
+            .email("El correo electrónico no es válido")
+            .optional()
+    );
+
+const direccionSchema = z
+    .object({
+        calle: z.string().trim(),
+        numero: z.string().trim(),
+        piso: z.string().trim(),
+        departamento: z.string().trim(),
+        barrio: z.string().trim(),
+    })
+    .optional()
+    .superRefine((direccion, ctx) => {
+        if (!direccion) return;
+
+        const tieneDatos = Object.values(direccion).some(
+            (valor) => valor.trim() !== ""
+        );
+
+        if (!tieneDatos) return;
+
+        if (direccion.calle.trim() === "") {
+            ctx.addIssue({
+                code: "custom",
+                path: ["calle"],
+                message: "La calle es obligatoria",
+            });
+        }
+
+        if (direccion.numero.trim() === "") {
+            ctx.addIssue({
+                code: "custom",
+                path: ["numero"],
+                message: "El número es obligatorio",
+            });
+        }
+    })
+    .transform((direccion) => {
+        if (!direccion) return undefined;
+
+        const tieneDatos = Object.values(direccion).some(
+            (valor) => valor.trim() !== ""
+        );
+
+        return tieneDatos ? direccion : undefined;
+    })
+    .optional();
+
 export const pacienteSchema = z.object({
     nombre: z
         .string()
@@ -10,25 +67,9 @@ export const pacienteSchema = z.object({
         .string()
         .regex(/^[0-9]{7,8}$/, "El DNI debe tener entre 7 y 8 dígitos"),
 
-    email: z
-        .string()
-        .email("El correo electrónico no es válido"),
+    email: emailSchema,
 
-    direccion: z.object({
-        calle: z
-            .string()
-            .min(1, "La calle es obligatoria"),
-
-        numero: z
-            .string()
-            .min(1, "El número es obligatorio"),
-
-        piso: z.string(),
-
-        departamento: z.string(),
-
-        barrio: z.string(),
-    }),
+    direccion: direccionSchema,
 
     telefono: z.object({
         tipo: z.enum(["CELULAR", "FIJO", "TRABAJO"]),

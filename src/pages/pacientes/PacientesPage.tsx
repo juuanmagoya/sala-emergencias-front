@@ -1,5 +1,6 @@
 import {
     Eye,
+    FileSpreadsheet,
     Pencil,
     Search,
     Trash2,
@@ -35,23 +36,31 @@ import {
     usePacientes,
 } from "@/hooks/usePacientes";
 
+import { useAuth } from "@/hooks/useAuth";
+
 import type { Paciente } from "@/types/paciente";
 
 import PacienteForm from "./PacienteForm";
 import PacienteDetail from "./PacienteDetail";
 import { PacienteTable, EmptyState } from "@/components/pacientes/PacienteTable";
+import ImportarPacientesDialog from "@/components/pacientes/ImportarPacientesDialog";
 
 export default function PacientesPage() {
     const { data, isLoading, isError } = usePacientes();
     const deleteMutation = useDeletePaciente();
+    const { usuario } = useAuth();
 
     const pacientes = data?.data ?? [];
+    const puedeImportar =
+        usuario?.rol === "admin" ||
+        usuario?.rol === "recepcionista";
 
     // Estados para los diálogos y selección
     const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDetailOpen, setIsDetailOpen] = useState(false);
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [search, setSearch] = useState("");
 
     // Filtrar pacientes por búsqueda
@@ -60,10 +69,15 @@ export default function PacientesPage() {
 
         if (!searchTerm) return true;
 
+        const telefono = `${paciente.telefono.codigoArea}${paciente.telefono.numero}`.toLowerCase();
+        const telefonoConEspacio = `${paciente.telefono.codigoArea} ${paciente.telefono.numero}`.toLowerCase();
+
         return (
             paciente.nombre.toLowerCase().includes(searchTerm) ||
             paciente.dni.toLowerCase().includes(searchTerm) ||
-            paciente.email.toLowerCase().includes(searchTerm)
+            telefono.includes(searchTerm) ||
+            telefonoConEspacio.includes(searchTerm) ||
+            (paciente.email?.toLowerCase().includes(searchTerm) ?? false)
         );
     });
 
@@ -129,14 +143,27 @@ export default function PacientesPage() {
                     </div>
                 </div>
 
-                <button
-                    type="button"
-                    onClick={handleCreate}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-95"
-                >
-                    <UserPlus size={18} />
-                    Nuevo paciente
-                </button>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    {puedeImportar && (
+                        <button
+                            type="button"
+                            onClick={() => setIsImportOpen(true)}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-emerald-600 to-teal-600 px-5 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-emerald-700 hover:to-teal-700 hover:shadow-xl active:scale-95"
+                        >
+                            <FileSpreadsheet size={18} />
+                            Importar pacientes (Excel)
+                        </button>
+                    )}
+
+                    <button
+                        type="button"
+                        onClick={handleCreate}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-blue-600 to-indigo-600 px-5 py-3 text-sm font-medium text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl active:scale-95"
+                    >
+                        <UserPlus size={18} />
+                        Nuevo paciente
+                    </button>
+                </div>
             </div>
 
             {/* ================================================= */}
@@ -154,7 +181,7 @@ export default function PacientesPage() {
                             type="text"
                             value={search}
                             onChange={(event) => setSearch(event.target.value)}
-                            placeholder="Buscar por nombre, DNI o email..."
+                            placeholder="Buscar por nombre, DNI, teléfono o email..."
                             className="w-full rounded-xl border-2 border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 hover:border-slate-300"
                         />
                     </div>
@@ -336,6 +363,15 @@ export default function PacientesPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            {/* ================================================= */}
+            {/* IMPORTAR PACIENTES */}
+            {/* ================================================= */}
+            <ImportarPacientesDialog
+                open={isImportOpen}
+                onOpenChange={setIsImportOpen}
+            />
+
         </div>
     );
 }
