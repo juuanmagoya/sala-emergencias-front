@@ -1,10 +1,13 @@
+
 import api from "@/api/axios";
 
 import type {
     LoginData,
     LoginPacienteData,
-    LoginPacienteResponse,
     LoginResponse,
+    SolicitudOtpPacienteResponse,
+    VerificarOtpPacienteData,
+    VerificarOtpPacienteResponse,
 } from "@/types/auth";
 
 interface ApiResponse<T> {
@@ -14,7 +17,8 @@ interface ApiResponse<T> {
 }
 
 /**
- * Iniciar sesión de un usuario interno (admin, médico o recepcionista).
+ * Iniciar sesión de un usuario interno
+ * (administrador, médico o recepcionista).
  */
 export async function loginUsuario(
     credentials: LoginData
@@ -27,17 +31,31 @@ export async function loginUsuario(
 }
 
 /**
- * Iniciar sesión de un paciente con DNI y teléfono.
+ * Solicitar un código OTP al correo registrado del paciente.
  *
- * El backend autentica contra la ficha Paciente y devuelve su identidad
- * junto con el JWT. No crea ni utiliza documentos de Usuario.
+ * Esta operación NO inicia sesión ni devuelve un JWT.
  */
-export async function loginPaciente(
+export async function solicitarCodigoPaciente(
     credentials: LoginPacienteData
 ) {
     const response = await api.post<
-        ApiResponse<LoginPacienteResponse>
+        ApiResponse<SolicitudOtpPacienteResponse>
     >("/auth/paciente/login", credentials);
+
+    return response.data;
+}
+
+/**
+ * Verificar el código OTP enviado al paciente.
+ *
+ * Solo esta operación devuelve el JWT.
+ */
+export async function verificarCodigoPaciente(
+    credentials: VerificarOtpPacienteData
+) {
+    const response = await api.post<
+        ApiResponse<VerificarOtpPacienteResponse>
+    >("/auth/paciente/verificar", credentials);
 
     return response.data;
 }

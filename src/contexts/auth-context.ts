@@ -1,33 +1,34 @@
+
 import { createContext } from "react";
 
 import type {
     IdentidadAutenticada,
     LoginData,
     LoginPacienteData,
+    SolicitudOtpPacienteResponse,
     Usuario,
+    VerificarOtpPacienteData,
 } from "@/types/auth";
 
 interface AuthContextType {
-    /**
-     * Identidad activa. El discriminante `tipo` permite distinguir
-     * entre un usuario interno y un paciente.
-     */
     identidad: IdentidadAutenticada | null;
 
-    /**
-     * Usuario interno derivado de `identidad`.
-     *
-     * Es `null` cuando la sesión pertenece a un paciente.
-     */
     usuario: Usuario | null;
 
     token: string | null;
+
     isAuthenticated: boolean;
 
     login: (credentials: LoginData) => Promise<void>;
-    loginPaciente: (
+
+    solicitarCodigoPaciente: (
         credentials: LoginPacienteData
+    ) => Promise<SolicitudOtpPacienteResponse>;
+
+    verificarCodigoPaciente: (
+        credentials: VerificarOtpPacienteData
     ) => Promise<void>;
+
     logout: () => void;
 }
 

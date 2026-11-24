@@ -1,4 +1,6 @@
+
 import {
+    useEffect,
     useState,
     type InputHTMLAttributes,
     type KeyboardEvent,
@@ -17,9 +19,12 @@ import axios from "axios";
 
 import {
     AlertCircle,
+    ArrowLeft,
     ArrowRight,
+    Clock3,
     CreditCard,
     HeartPulse,
+    KeyRound,
     Loader2,
     LockKeyhole,
     Mail,
@@ -37,8 +42,10 @@ import { cn } from "@/lib/utils";
 import {
     loginPacienteSchema,
     loginSchema,
+    verificarOtpPacienteSchema,
     type LoginFormData,
     type LoginPacienteFormData,
+    type VerificarOtpPacienteFormData,
 } from "@/schemas/auth.schema";
 
 import imagenLogin from "@/assets/login/sala-espera.jpg";
@@ -58,11 +65,19 @@ const MODALIDADES = [
 
 type Modalidad = (typeof MODALIDADES)[number]["id"];
 
+type PasoPaciente = "credenciales" | "codigo";
+
+interface SolicitudOtp {
+    expiraEn: string;
+    proximoEnvioPermitido: string;
+}
+
 export default function LoginPage() {
     const {
         identidad,
         login,
-        loginPaciente,
+        solicitarCodigoPaciente,
+        verificarCodigoPaciente,
     } = useAuth();
 
     const [modalidad, setModalidad] =
@@ -70,6 +85,21 @@ export default function LoginPage() {
 
     const [errorServidor, setErrorServidor] =
         useState("");
+
+    const [enviando, setEnviando] = useState(false);
+
+    const [pasoPaciente, setPasoPaciente] =
+        useState<PasoPaciente>("credenciales");
+
+    const [credencialesPaciente, setCredencialesPaciente] =
+        useState<LoginPacienteFormData | null>(null);
+
+    const [solicitudOtp, setSolicitudOtp] =
+        useState<SolicitudOtp | null>(null);
+
+    // Se inicializa con un valor puro.
+    // La hora se actualiza mediante el intervalo.
+    const [ahora, setAhora] = useState(0);
 
     const formSala = useForm<LoginFormData>({
         resolver: zodResolver(loginSchema),
@@ -79,28 +109,86 @@ export default function LoginPage() {
         },
     });
 
-    const formPaciente =
-        useForm<LoginPacienteFormData>({
-            resolver: zodResolver(
-                loginPacienteSchema
-            ),
-            defaultValues: {
-                dni: "",
-                telefono: "",
-            },
-        });
+    const formPaciente = useForm<LoginPacienteFormData>({
+        resolver: zodResolver(loginPacienteSchema),
+        defaultValues: {
+            dni: "",
+            telefono: "",
+        },
+    });
 
-    // Evita envíos duplicados. Se combina con el estado isSubmitting
-    // de React Hook Form y con el botón deshabilitado.
-    const [enviando, setEnviando] = useState(false);
+    const formOtp = useForm<VerificarOtpPacienteFormData>({
+        resolver: zodResolver(verificarOtpPacienteSchema),
+        defaultValues: {
+            codigo: "",
+        },
+    });
 
     const cargando =
         enviando ||
         formSala.formState.isSubmitting ||
-        formPaciente.formState.isSubmitting;
+        formPaciente.formState.isSubmitting ||
+        formOtp.formState.isSubmitting;
 
-    // Un paciente autenticado entra directamente a su portal.
-    if (identidad?.tipo === "paciente") {
+    const esSala = modalidad === "sala";
+
+    // =====================================================
+    // RELOJ PARA EXPIRACIÓN Y REENVÍO
+    // =====================================================
+
+    // El efecto se declara antes de cualquier retorno condicional.
+    // No actualizamos el estado directamente al ejecutarse el efecto:
+    // solamente lo hacemos desde el callback del intervalo.
+    useEffect(() => {
+        const intervalo = window.setInterval(() => {
+            setAhora(Date.now());
+        }, 1000);
+
+        return () => {
+            window.clearInterval(intervalo);
+        };
+    }, []);
+
+    const segundosReenvio = solicitudOtp
+        ? Math.max(
+              0,
+              Math.ceil(
+                  (
+                      new Date(
+                          solicitudOtp.proximoEnvioPermitido
+                      ).getTime() - ahora
+                  ) / 1000
+              )
+          )
+        : 0;
+
+    const segundosExpiracion = solicitudOtp
+        ? Math.max(
+              0,
+              Math.ceil(
+                  (
+                      new Date(
+                          solicitudOtp.expiraEn
+                      ).getTime() - ahora
+                  ) / 1000
+              )
+          )
+        : 0;
+
+    const formatearTiempo = (segundos: number) => {
+        const minutos = Math.floor(segundos / 60);
+        const restantes = segundos % 60;
+
+        return `${String(minutos).padStart(2, "0")}:${String(
+            restantes
+        ).padStart(2, "0")}`;
+    };
+
+    // =====================================================
+    // REDIRECCIÓN SI YA EXISTE UNA SESIÓN
+    // =====================================================
+
+    if (identidad) {
         return (
             <Navigate
                 to={obtenerRutaInicio(identidad)}
@@ -109,15 +197,9 @@ export default function LoginPage() {
         );
     }
 
-    // Un usuario interno vuelve a la ruta que su rol puede ver.
-    if (identidad?.tipo === "usuario") {
-        return (
-            <Navigate
-                to={obtenerRutaInicio(identidad)}
-                replace
-            />
-        );
-    }
+    // =====================================================
+    // MANEJO DE ERRORES
+    // =====================================================
 
     const limpiarErrorServidor = () => {
         if (errorServidor) {
@@ -125,9 +207,11 @@ export default function LoginPage() {
         }
     };
 
-    const cambiarModalidad = (
-        nueva: Modalidad
-    ) => {
+    // =====================================================
+    // CAMBIO DE MODALIDAD
+    // =====================================================
+
+    const cambiarModalidad = (nueva: Modalidad) => {
         if (nueva === modalidad || cargando) {
             return;
         }
@@ -135,9 +219,13 @@ export default function LoginPage() {
         setModalidad(nueva);
         setErrorServidor("");
 
-        // Las validaciones de cada modalidad son independientes.
+        setPasoPaciente("credenciales");
+        setCredencialesPaciente(null);
+        setSolicitudOtp(null);
+
         formSala.clearErrors();
         formPaciente.clearErrors();
+        formOtp.reset();
     };
 
     const handleTabKeyDown = (
@@ -165,10 +253,15 @@ export default function LoginPage() {
                     : "sala";
 
         cambiarModalidad(destino);
+
         document
             .getElementById(`tab-${destino}`)
             ?.focus();
     };
+
+    // =====================================================
+    // LOGIN INTERNO
+    // =====================================================
 
     const onSubmitSala = formSala.handleSubmit(
         async (datos) => {
@@ -191,8 +284,12 @@ export default function LoginPage() {
         }
     );
 
-    const onSubmitPaciente =
-        formPaciente.handleSubmit(async (datos) => {
+    // =====================================================
+    // PASO 1: SOLICITAR OTP
+    // =====================================================
+
+    const onSubmitPaciente = formPaciente.handleSubmit(
+        async (datos) => {
             if (enviando) {
                 return;
             }
@@ -201,27 +298,133 @@ export default function LoginPage() {
             setErrorServidor("");
 
             try {
-                await loginPaciente(datos);
+                const response =
+                    await solicitarCodigoPaciente(datos);
+
+                setCredencialesPaciente(datos);
+                setSolicitudOtp(response);
+                setPasoPaciente("codigo");
+
+                formOtp.reset({
+                    codigo: "",
+                });
             } catch (error) {
                 setErrorServidor(
                     obtenerMensajeError(
                         error,
-                        "paciente"
+                        "paciente",
+                        "solicitud"
                     )
                 );
             } finally {
                 setEnviando(false);
             }
-        });
+        }
+    );
 
-    const esSala = modalidad === "sala";
+    // =====================================================
+    // PASO 2: VERIFICAR OTP
+    // =====================================================
+
+    const onSubmitOtp = formOtp.handleSubmit(
+        async (datos) => {
+            if (
+                enviando ||
+                !credencialesPaciente
+            ) {
+                return;
+            }
+
+            setEnviando(true);
+            setErrorServidor("");
+
+            try {
+                await verificarCodigoPaciente({
+                    ...credencialesPaciente,
+                    codigo: datos.codigo,
+                });
+
+                // AuthContext guarda el JWT y la identidad.
+                // La redirección se realiza automáticamente.
+            } catch (error) {
+                setErrorServidor(
+                    obtenerMensajeError(
+                        error,
+                        "paciente",
+                        "verificacion"
+                    )
+                );
+            } finally {
+                setEnviando(false);
+            }
+        }
+    );
+
+    // =====================================================
+    // REENVIAR OTP
+    // =====================================================
+
+    const reenviarCodigo = async () => {
+        if (
+            enviando ||
+            !credencialesPaciente ||
+            segundosReenvio > 0
+        ) {
+            return;
+        }
+
+        setEnviando(true);
+        setErrorServidor("");
+
+        try {
+            const response =
+                await solicitarCodigoPaciente(
+                    credencialesPaciente
+                );
+
+            setSolicitudOtp(response);
+            setAhora(Date.now());
+
+            formOtp.reset({
+                codigo: "",
+            });
+        } catch (error) {
+            setErrorServidor(
+                obtenerMensajeError(
+                    error,
+                    "paciente",
+                    "solicitud"
+                )
+            );
+        } finally {
+            setEnviando(false);
+        }
+    };
+
+    // =====================================================
+    // VOLVER AL PASO DE CREDENCIALES
+    // =====================================================
+
+    const volverACredenciales = () => {
+        if (cargando) {
+            return;
+        }
+
+        setPasoPaciente("credenciales");
+        setSolicitudOtp(null);
+        setCredencialesPaciente(null);
+        setErrorServidor("");
+
+        formOtp.reset();
+    };
+
+    // =====================================================
+    // RENDER
+    // =====================================================
 
     return (
         <div className="min-h-screen bg-slate-50 lg:grid lg:grid-cols-[45%_55%]">
-
-            {/* ================================================= */}
             {/* SECTOR VISUAL */}
-            {/* ================================================= */}
 
             <section className="relative isolate h-56 overflow-hidden sm:h-72 lg:h-auto lg:min-h-screen">
                 <img
@@ -254,21 +457,16 @@ export default function LoginPage() {
                     </div>
 
                     <p className="hidden text-xs text-slate-300 lg:block">
-                        Sala de Emergencias · Gestión
-                        sanitaria
+                        Sala de Emergencias · Gestión sanitaria
                     </p>
                 </div>
             </section>
 
-            {/* ================================================= */}
             {/* SECTOR DEL FORMULARIO */}
-            {/* ================================================= */}
 
             <main className="flex items-center justify-center px-4 py-8 sm:px-6 sm:py-12 lg:px-10">
                 <div className="w-full max-w-md">
-
                     <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60 sm:p-8">
-
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-600">
                                 Acceso al sistema
@@ -281,11 +479,13 @@ export default function LoginPage() {
                             <p className="mt-2 text-sm leading-6 text-slate-500">
                                 {esSala
                                     ? "Ingresá con tu email y contraseña para acceder al panel de gestión."
-                                    : "Ingresá con el DNI y el teléfono registrados en tu ficha de paciente."}
+                                    : pasoPaciente === "credenciales"
+                                      ? "Ingresá con el DNI y el teléfono registrados en tu ficha de paciente."
+                                      : "Ingresá el código de seis dígitos que enviamos a tu correo electrónico."}
                             </p>
                         </div>
 
-                        {/* Selector de credenciales */}
+                        {/* SELECTOR DE MODALIDAD */}
 
                         <div
                             role="tablist"
@@ -293,11 +493,7 @@ export default function LoginPage() {
                             className="mt-6 grid grid-cols-2 gap-1 rounded-2xl border border-slate-200 bg-slate-100/80 p-1"
                         >
                             {MODALIDADES.map(
-                                ({
-                                    id,
-                                    label,
-                                    icon: Icon,
-                                }) => {
+                                ({ id, label, icon: Icon }) => {
                                     const activa =
                                         modalidad === id;
 
@@ -309,18 +505,12 @@ export default function LoginPage() {
                                             role="tab"
                                             aria-selected={activa}
                                             aria-controls={`panel-${id}`}
-                                            tabIndex={
-                                                activa ? 0 : -1
-                                            }
+                                            tabIndex={activa ? 0 : -1}
                                             disabled={cargando}
                                             onClick={() =>
-                                                cambiarModalidad(
-                                                    id
-                                                )
+                                                cambiarModalidad(id)
                                             }
-                                            onKeyDown={(
-                                                event
-                                            ) =>
+                                            onKeyDown={(event) =>
                                                 handleTabKeyDown(
                                                     event,
                                                     id
@@ -357,7 +547,7 @@ export default function LoginPage() {
                             )}
                         </div>
 
-                        {/* Formulario Sala Médica */}
+                        {/* FORMULARIO SALA MÉDICA */}
 
                         <div
                             id="panel-sala"
@@ -369,8 +559,7 @@ export default function LoginPage() {
                                 noValidate
                                 onSubmit={onSubmitSala}
                                 aria-busy={
-                                    formSala.formState
-                                        .isSubmitting
+                                    formSala.formState.isSubmitting
                                 }
                                 className="mt-6 space-y-5"
                             >
@@ -389,8 +578,8 @@ export default function LoginPage() {
                                         }
                                     )}
                                     error={
-                                        formSala.formState
-                                            .errors.email?.message
+                                        formSala.formState.errors
+                                            .email?.message
                                     }
                                     disabled={cargando}
                                 />
@@ -410,9 +599,8 @@ export default function LoginPage() {
                                         }
                                     )}
                                     error={
-                                        formSala.formState
-                                            .errors.password
-                                            ?.message
+                                        formSala.formState.errors
+                                            .password?.message
                                     }
                                     disabled={cargando}
                                 />
@@ -421,18 +609,13 @@ export default function LoginPage() {
                                     mensaje={errorServidor}
                                 />
 
-                                <BotonIngresar
-                                    cargando={
-                                        formSala.formState
-                                            .isSubmitting
-                                    }
-                                >
+                                <BotonIngresar cargando={cargando}>
                                     Ingresar a la Sala Médica
                                 </BotonIngresar>
                             </form>
                         </div>
 
-                        {/* Formulario Paciente */}
+                        {/* FORMULARIO PACIENTE */}
 
                         <div
                             id="panel-paciente"
@@ -440,85 +623,217 @@ export default function LoginPage() {
                             aria-labelledby="tab-paciente"
                             hidden={esSala}
                         >
-                            <form
-                                noValidate
-                                onSubmit={onSubmitPaciente}
-                                aria-busy={
-                                    formPaciente.formState
-                                        .isSubmitting
-                                }
-                                className="mt-6 space-y-5"
-                            >
-                                <CampoTexto
-                                    id="dni"
-                                    label="DNI"
-                                    type="text"
-                                    inputMode="numeric"
-                                    icon={CreditCard}
-                                    placeholder="Ej. 30123456"
-                                    autoComplete="off"
-                                    registro={formPaciente.register(
-                                        "dni",
-                                        {
-                                            onChange:
-                                                limpiarErrorServidor,
-                                        }
-                                    )}
-                                    error={
-                                        formPaciente.formState
-                                            .errors.dni?.message
+                            {pasoPaciente === "credenciales" ? (
+                                <form
+                                    noValidate
+                                    onSubmit={onSubmitPaciente}
+                                    aria-busy={
+                                        formPaciente.formState.isSubmitting
                                     }
-                                    disabled={cargando}
-                                />
-
-                                <CampoTexto
-                                    id="telefono"
-                                    label="Teléfono"
-                                    type="tel"
-                                    inputMode="tel"
-                                    icon={Phone}
-                                    placeholder="Ej. 3777123456"
-                                    autoComplete="off"
-                                    registro={formPaciente.register(
-                                        "telefono",
-                                        {
-                                            onChange:
-                                                limpiarErrorServidor,
-                                        }
-                                    )}
-                                    error={
-                                        formPaciente.formState
-                                            .errors.telefono
-                                            ?.message
-                                    }
-                                    disabled={cargando}
-                                />
-
-                                <ErrorServidor
-                                    mensaje={errorServidor}
-                                />
-
-                                <BotonIngresar
-                                    cargando={
-                                        formPaciente.formState
-                                            .isSubmitting
-                                    }
+                                    className="mt-6 space-y-5"
                                 >
-                                    Ingresar como paciente
-                                </BotonIngresar>
-                            </form>
+                                    <CampoTexto
+                                        id="dni"
+                                        label="DNI"
+                                        type="text"
+                                        inputMode="numeric"
+                                        icon={CreditCard}
+                                        placeholder="Ej. 30123456"
+                                        autoComplete="off"
+                                        registro={formPaciente.register(
+                                            "dni",
+                                            {
+                                                onChange:
+                                                    limpiarErrorServidor,
+                                            }
+                                        )}
+                                        error={
+                                            formPaciente.formState.errors
+                                                .dni?.message
+                                        }
+                                        disabled={cargando}
+                                    />
+
+                                    <CampoTexto
+                                        id="telefono"
+                                        label="Teléfono"
+                                        type="tel"
+                                        inputMode="tel"
+                                        icon={Phone}
+                                        placeholder="Ej. 3777123456"
+                                        autoComplete="off"
+                                        registro={formPaciente.register(
+                                            "telefono",
+                                            {
+                                                onChange:
+                                                    limpiarErrorServidor,
+                                            }
+                                        )}
+                                        error={
+                                            formPaciente.formState.errors
+                                                .telefono?.message
+                                        }
+                                        disabled={cargando}
+                                    />
+
+                                    <ErrorServidor
+                                        mensaje={errorServidor}
+                                    />
+
+                                    <BotonIngresar cargando={cargando}>
+                                        Enviar código de verificación
+                                    </BotonIngresar>
+                                </form>
+                            ) : (
+                                <form
+                                    noValidate
+                                    onSubmit={onSubmitOtp}
+                                    aria-busy={
+                                        formOtp.formState.isSubmitting
+                                    }
+                                    className="mt-6 space-y-5"
+                                >
+                                    <div className="rounded-2xl border border-cyan-100 bg-cyan-50/70 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-cyan-600 shadow-sm">
+                                                <Mail size={20} />
+                                            </div>
+
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-800">
+                                                    Revisá tu correo electrónico
+                                                </p>
+
+                                                <p className="mt-1 text-xs leading-5 text-slate-600">
+                                                    Enviamos un código de seis
+                                                    dígitos al correo registrado
+                                                    en tu ficha de paciente.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <CampoTexto
+                                        id="codigo"
+                                        label="Código de verificación"
+                                        type="text"
+                                        inputMode="numeric"
+                                        autoComplete="one-time-code"
+                                        maxLength={6}
+                                        icon={KeyRound}
+                                        placeholder="Ej. 123456"
+                                        registro={formOtp.register(
+                                            "codigo",
+                                            {
+                                                onChange: (event) => {
+                                                    limpiarErrorServidor();
+
+                                                    event.target.value =
+                                                        event.target.value.replace(
+                                                            /\D/g,
+                                                            ""
+                                                        );
+                                                },
+                                            }
+                                        )}
+                                        error={
+                                            formOtp.formState.errors
+                                                .codigo?.message
+                                        }
+                                        disabled={cargando}
+                                    />
+
+                                    {solicitudOtp && (
+                                        <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                                            <div className="flex items-center justify-between gap-3 text-xs">
+                                                <span className="flex items-center gap-2 text-slate-500">
+                                                    <Clock3 size={15} />
+                                                    El código vence en
+                                                </span>
+
+                                                <span className="font-semibold tabular-nums text-slate-800">
+                                                    {formatearTiempo(
+                                                        segundosExpiracion
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                                                <div
+                                                    className="h-full rounded-full bg-cyan-500 transition-all"
+                                                    style={{
+                                                        width: `${
+                                                            Math.min(
+                                                                100,
+                                                                (segundosExpiracion /
+                                                                    300) *
+                                                                    100
+                                                            )
+                                                        }%`,
+                                                    }}
+                                                />
+                                            </div>
+
+                                            {segundosExpiracion === 0 && (
+                                                <p className="text-xs text-amber-700">
+                                                    El código puede haber
+                                                    expirado. Solicitá uno
+                                                    nuevo para continuar.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <ErrorServidor
+                                        mensaje={errorServidor}
+                                    />
+
+                                    <BotonIngresar cargando={cargando}>
+                                        Verificar código
+                                    </BotonIngresar>
+
+                                    <div className="flex flex-col items-center gap-3 pt-1">
+                                        <button
+                                            type="button"
+                                            disabled={
+                                                cargando ||
+                                                segundosReenvio > 0
+                                            }
+                                            onClick={reenviarCodigo}
+                                            className="text-sm font-semibold text-cyan-700 transition hover:text-cyan-900 disabled:cursor-not-allowed disabled:text-slate-400"
+                                        >
+                                            {segundosReenvio > 0
+                                                ? `Podés solicitar otro código en ${formatearTiempo(
+                                                      segundosReenvio
+                                                  )}`
+                                                : "¿No recibiste el código? Reenviar"}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            disabled={cargando}
+                                            onClick={volverACredenciales}
+                                            className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 transition hover:text-slate-800 disabled:opacity-50"
+                                        >
+                                            <ArrowLeft size={14} />
+                                            Volver e ingresar otros datos
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
                         </div>
 
                         <p className="mt-5 text-center text-xs leading-5 text-slate-400">
                             {esSala
                                 ? "¿No podés ingresar? Contactá al administrador del sistema."
-                                : "Usá el mismo teléfono con el que te registraste en la sala."}
+                                : pasoPaciente === "credenciales"
+                                  ? "Usá el mismo teléfono con el que te registraste en la sala."
+                                  : "Si no recibís el correo, comunicate con recepción."}
                         </p>
                     </div>
 
                     <p className="mt-4 text-center text-xs text-slate-400">
-                        Sistema interno de gestión · Sala de
-                        Emergencias
+                        Sistema interno de gestión · Sala de Emergencias
                     </p>
                 </div>
             </main>
@@ -540,19 +855,14 @@ function Marca({ variante }: MarcaProps) {
     return (
         <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-500 text-slate-950 shadow-lg shadow-cyan-500/25">
-                <HeartPulse
-                    size={22}
-                    strokeWidth={2.3}
-                />
+                <HeartPulse size={22} strokeWidth={2.3} />
             </div>
 
             <div>
                 <p
                     className={cn(
                         "text-sm font-semibold tracking-tight",
-                        esClara
-                            ? "text-white"
-                            : "text-slate-900"
+                        esClara ? "text-white" : "text-slate-900"
                     )}
                 >
                     Emergencias
@@ -561,9 +871,7 @@ function Marca({ variante }: MarcaProps) {
                 <p
                     className={cn(
                         "text-[11px]",
-                        esClara
-                            ? "text-slate-300"
-                            : "text-slate-500"
+                        esClara ? "text-slate-300" : "text-slate-500"
                     )}
                 >
                     Gestión sanitaria
@@ -645,9 +953,7 @@ interface ErrorServidorProps {
     mensaje: string;
 }
 
-function ErrorServidor({
-    mensaje,
-}: ErrorServidorProps) {
+function ErrorServidor({ mensaje }: ErrorServidorProps) {
     if (!mensaje) {
         return null;
     }
@@ -688,7 +994,7 @@ function BotonIngresar({
                         size={18}
                         className="animate-spin"
                     />
-                    Ingresando...
+                    Procesando...
                 </>
             ) : (
                 <>
@@ -710,32 +1016,56 @@ function BotonIngresar({
 
 function obtenerMensajeError(
     error: unknown,
-    modalidad: Modalidad
+    modalidad: Modalidad,
+    etapa?: "solicitud" | "verificacion"
 ): string {
     if (axios.isAxiosError(error)) {
-        // Sin respuesta: problema de red o servidor caído.
         if (!error.response) {
             return "No pudimos comunicarnos con el servidor. Revisá tu conexión e intentá nuevamente.";
         }
 
         const status = error.response.status;
 
+        const mensajeBackend =
+            error.response.data?.message;
+
+        if (
+            modalidad === "paciente" &&
+            typeof mensajeBackend === "string" &&
+            mensajeBackend.trim().length > 0 &&
+            status !== 500
+        ) {
+            return mensajeBackend;
+        }
+
         if (status === 401) {
-            return modalidad === "sala"
-                ? "Email o contraseña incorrectos."
+            if (modalidad === "sala") {
+                return "Email o contraseña incorrectos.";
+            }
+
+            return etapa === "verificacion"
+                ? "No pudimos validar el código o las credenciales. Revisá los datos e intentá nuevamente."
                 : "DNI o teléfono incorrectos.";
         }
 
         if (status === 400) {
-            return modalidad === "sala"
-                ? "Revisá el email y la contraseña ingresados."
+            if (modalidad === "sala") {
+                return "Revisá el email y la contraseña ingresados.";
+            }
+
+            return etapa === "verificacion"
+                ? "El código ingresado no es válido. Revisalo e intentá nuevamente."
                 : "Revisá el DNI y el teléfono ingresados.";
         }
 
         if (status === 429) {
-            return "Demasiados intentos. Esperá unos minutos antes de volver a intentar.";
+            return "Demasiados intentos o solicitudes. Esperá unos minutos antes de volver a intentar.";
+        }
+
+        if (status >= 500) {
+            return "Ocurrió un problema en el servidor. Intentá nuevamente más tarde.";
         }
     }
 
-    return "No pudimos iniciar sesión. Intentá nuevamente.";
+    return "No pudimos completar la operación. Intentá nuevamente.";
 }
