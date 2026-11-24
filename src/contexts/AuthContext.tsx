@@ -1,3 +1,4 @@
+
 import {
     useEffect,
     useState,
@@ -10,12 +11,15 @@ import type {
     LoginData,
     LoginPacienteData,
     PacienteAutenticado,
+    SolicitudOtpPacienteResponse,
     Usuario,
+    VerificarOtpPacienteData,
 } from "@/types/auth";
 
 import {
-    loginPaciente as loginPacienteApi,
     loginUsuario,
+    solicitarCodigoPaciente as solicitarCodigoPacienteApi,
+    verificarCodigoPaciente as verificarCodigoPacienteApi,
 } from "@/api/auth.api";
 
 import {
@@ -27,9 +31,7 @@ import {
 
 import { AuthContext } from "./auth-context";
 
-// Prefijos de las cachés personales del paciente. Se eliminan al
-// cerrar sesión para no conservar datos de una identidad anterior
-// en la misma pestaña.
+// Prefijos de las cachés personales del paciente.
 const MI_HISTORIAL_QUERY_KEY = [
     "historias-clinicas",
     "mi-historial",
@@ -47,16 +49,18 @@ interface AuthProviderProps {
 export function AuthProvider({
     children,
 }: AuthProviderProps) {
-
     const queryClient = useQueryClient();
 
-    // Token e identidad se guardan juntos para que nunca queden
-    // desincronizados.
+    // Token e identidad se guardan juntos.
     const [sesion, setSesion] =
         useState<SesionGuardada | null>(
             () => obtenerSesionGuardada()
         );
 
+    /**
+     * Login de usuarios internos.
+     * Mantiene el comportamiento anterior.
+     */
     const login = async (
         credentials: LoginData
     ) => {
@@ -76,12 +80,34 @@ export function AuthProvider({
         setSesion({ token, identidad });
     };
 
-    const loginPaciente = async (
+    /**
+     * Primer paso del acceso del paciente.
+     *
+     * Solicita el OTP, pero NO crea una sesión.
+     */
+    const solicitarCodigoPaciente = async (
         credentials: LoginPacienteData
+    ): Promise<SolicitudOtpPacienteResponse> => {
+        const response =
+            await solicitarCodigoPacienteApi(
+                credentials
+            );
+
+        return response.data;
+    };
+
+    /**
+     * Segundo paso del acceso del paciente.
+     *
+     * Verifica el OTP y recién entonces guarda el JWT.
+     */
+    const verificarCodigoPaciente = async (
+        credentials: VerificarOtpPacienteData
     ) => {
-        const response = await loginPacienteApi(
-            credentials
-        );
+        const response =
+            await verificarCodigoPacienteApi(
+                credentials
+            );
 
         const { token, paciente } = response.data;
 
@@ -95,8 +121,6 @@ export function AuthProvider({
     };
 
     const logout = () => {
-        // La caché de React Query no se limpia automáticamente al
-        // cerrar sesión. Se eliminan los historiales del paciente.
         queryClient.removeQueries({
             queryKey: MI_HISTORIAL_QUERY_KEY,
         });
@@ -111,8 +135,6 @@ export function AuthProvider({
 
     useEffect(() => {
         const handleSessionExpired = () => {
-            // Mismo resguardo que en logout(): un 401 también cierra
-            // la sesión y no debe dejar datos personales en memoria.
             queryClient.removeQueries({
                 queryKey: MI_HISTORIAL_QUERY_KEY,
             });
@@ -140,10 +162,10 @@ export function AuthProvider({
 
     const identidad = sesion?.identidad ?? null;
 
-    // `usuario` conserva la forma que ya consumían el sidebar y las
-    // rutas protegidas. Para un paciente es null.
     const usuario =
-        identidad?.tipo === "usuario" ? identidad : null;
+        identidad?.tipo === "usuario"
+            ? identidad
+            : null;
 
     return (
         <AuthContext.Provider
@@ -153,7 +175,8 @@ export function AuthProvider({
                 token: sesion?.token ?? null,
                 isAuthenticated: Boolean(sesion),
                 login,
-                loginPaciente,
+                solicitarCodigoPaciente,
+                verificarCodigoPaciente,
                 logout,
             }}
         >

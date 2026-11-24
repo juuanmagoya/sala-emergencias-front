@@ -12,7 +12,6 @@ const ROLES_USUARIO: readonly RolUsuario[] = [
     "medico",
     "recepcionista",
 ];
-
 export interface SesionGuardada {
     token: string;
     identidad: IdentidadAutenticada;

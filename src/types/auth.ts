@@ -1,3 +1,4 @@
+
 // Roles de las cuentas internas de la Sala Médica.
 export type RolUsuario =
     | "admin"
@@ -9,8 +10,6 @@ export type RolPaciente = "paciente";
 
 /**
  * Identidad de un usuario interno autenticado.
- *
- * `tipo` es el discriminante que permite distinguirla de un paciente.
  */
 export interface Usuario {
     tipo: "usuario";
@@ -23,8 +22,6 @@ export interface Usuario {
 
 /**
  * Identidad de un paciente autenticado.
- *
- * No tiene email ni contraseña: la credencial es DNI + teléfono.
  */
 export interface PacienteAutenticado {
     tipo: "paciente";
@@ -45,14 +42,25 @@ export interface LoginData {
     password: string;
 }
 
+/**
+ * Credenciales iniciales para solicitar el código OTP.
+ */
 export interface LoginPacienteData {
     dni: string;
     telefono: string;
 }
 
 /**
+ * Datos necesarios para verificar el código OTP.
+ */
+export interface VerificarOtpPacienteData {
+    dni: string;
+    telefono: string;
+    codigo: string;
+}
+
+/**
  * Datos exactos que devuelve el backend en el login interno.
- * El discriminante `tipo` se agrega en el frontend al construir la sesión.
  */
 export interface UsuarioLoginResponse {
     id: string;
@@ -63,7 +71,8 @@ export interface UsuarioLoginResponse {
 }
 
 /**
- * Datos exactos que devuelve el backend en el login de pacientes.
+ * Datos mínimos del paciente que devuelve el backend
+ * después de verificar correctamente el OTP.
  */
 export interface PacienteLoginResponse {
     id: string;
@@ -76,7 +85,20 @@ export interface LoginResponse {
     usuario: UsuarioLoginResponse;
 }
 
-export interface LoginPacienteResponse {
+/**
+ * Respuesta de POST /auth/paciente/login.
+ * Esta respuesta NO contiene un JWT.
+ */
+export interface SolicitudOtpPacienteResponse {
+    expiraEn: string;
+    proximoEnvioPermitido: string;
+}
+
+/**
+ * Respuesta de POST /auth/paciente/verificar.
+ * Esta sí contiene el JWT y la identidad autenticada.
+ */
+export interface VerificarOtpPacienteResponse {
     token: string;
     paciente: PacienteLoginResponse;
 }

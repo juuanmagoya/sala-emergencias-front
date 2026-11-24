@@ -1,3 +1,4 @@
+
 import { z } from "zod";
 
 export const loginSchema = z.object({
@@ -15,10 +16,7 @@ export const loginSchema = z.object({
 export type LoginFormData = z.infer<typeof loginSchema>;
 
 /**
- * Validaciones de la modalidad Paciente.
- *
- * Solo se exige que ambos campos estén presentes. El formato y la
- * validez definitiva de las credenciales los resuelve el backend.
+ * Validaciones de las credenciales iniciales del paciente.
  */
 export const loginPacienteSchema = z.object({
     dni: z
@@ -34,4 +32,22 @@ export const loginPacienteSchema = z.object({
 
 export type LoginPacienteFormData = z.infer<
     typeof loginPacienteSchema
+>;
+
+/**
+ * Validación del código OTP enviado al correo.
+ */
+export const verificarOtpPacienteSchema = z.object({
+    codigo: z
+        .string()
+        .trim()
+        .length(6, "El código debe tener 6 dígitos")
+        .regex(
+            /^\d{6}$/,
+            "El código debe contener únicamente números"
+        ),
+});
+
+export type VerificarOtpPacienteFormData = z.infer<
+    typeof verificarOtpPacienteSchema
 >;
