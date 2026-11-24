@@ -36,7 +36,7 @@ export const NAV_GESTION: NavItem[] = [
         title: "Pacientes",
         icon: Users,
         href: "/pacientes",
-        rolesPermitidos: ["admin", "recepcionista", "medico"],
+        rolesPermitidos: ["admin", "recepcionista"],
     },
     {
         title: "Recepción",
