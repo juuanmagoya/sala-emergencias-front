@@ -1,295 +1,543 @@
+
 import {
     ArrowUpRight,
     CalendarDays,
     Clock3,
-    MoreHorizontal,
     Stethoscope,
     Users,
     Activity,
+    CheckCircle2,
+    XCircle,
+    RefreshCw,
 } from "lucide-react";
 
+import type { LucideIcon } from "lucide-react";
 
 import { usePacientes } from "@/hooks/usePacientes";
+import { useMedicos } from "@/hooks/useMedicos";
+import { useTurnos } from "@/hooks/useTurnos";
+
+// ============================================================
+// CONFIGURACIÓN
+// ============================================================
+
+const ZONA_HORARIA = "America/Argentina/Buenos_Aires";
+
+function obtenerFechaArgentina(fecha: Date = new Date()): string {
+    const partes = new Intl.DateTimeFormat("en-CA", {
+        timeZone: ZONA_HORARIA,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(fecha);
+
+    const obtener = (tipo: string) =>
+        partes.find((parte) => parte.type === tipo)?.value ?? "";
+
+    return `${obtener("year")}-${obtener("month")}-${obtener("day")}`;
+}
+
+function formatearHora(fecha: string): string {
+    const date = new Date(fecha);
+
+    if (Number.isNaN(date.getTime())) {
+        return "--:--";
+    }
+
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: ZONA_HORARIA,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+    }).format(date);
+}
+
+function formatearFechaActual(): string {
+    return new Intl.DateTimeFormat("es-AR", {
+        timeZone: ZONA_HORARIA,
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+    }).format(new Date());
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
 
 export default function Dashboard() {
-    const { data: pacientes, isLoading } = usePacientes();
+    const {
+        data: pacientes,
+        isLoading: cargandoPacientes,
+        isError: errorPacientes,
+        refetch: recargarPacientes,
+    } = usePacientes();
+
+    const {
+        data: medicos,
+        isLoading: cargandoMedicos,
+        isError: errorMedicos,
+        refetch: recargarMedicos,
+    } = useMedicos();
+
+    const {
+        data: turnos,
+        isLoading: cargandoTurnos,
+        isError: errorTurnos,
+        refetch: recargarTurnos,
+    } = useTurnos();
+
+    // --------------------------------------------------------
+    // DATOS REALES
+    // --------------------------------------------------------
+
+    const fechaHoy = obtenerFechaArgentina();
+
+    const listaMedicos = medicos?.data ?? [];
+    const listaTurnos = turnos?.data ?? [];
+
+    const medicosActivos = listaMedicos.filter(
+        (medico) => medico.activo
+    ).length;
+
+    // --------------------------------------------------------
+    // TURNOS DEL DÍA
+    // --------------------------------------------------------
+
+    const turnosHoy = listaTurnos
+        .filter((turno) => {
+            if (!turno.fechaTurno) return false;
+
+            const fecha = new Date(turno.fechaTurno);
+
+            if (Number.isNaN(fecha.getTime())) return false;
+
+            return obtenerFechaArgentina(fecha) === fechaHoy;
+        })
+        .sort(
+            (a, b) =>
+                new Date(a.fechaTurno).getTime() -
+                new Date(b.fechaTurno).getTime()
+        );
+
+    // --------------------------------------------------------
+    // ESTADÍSTICAS
+    // --------------------------------------------------------
+
+    const turnosPendientes = turnosHoy.filter(
+        (turno) => turno.estado === "pendiente"
+    ).length;
+
+    const turnosAtendidos = turnosHoy.filter(
+        (turno) => turno.estado === "atendido"
+    ).length;
+
+    const turnosCancelados = turnosHoy.filter(
+        (turno) => turno.estado === "cancelado"
+    ).length;
+
+    const turnosProgramados =
+        turnosHoy.length - turnosCancelados;
+
+    const porcentajeAtencion =
+        turnosProgramados > 0
+            ? Math.round(
+                (turnosAtendidos / turnosProgramados) * 100
+            )
+            : 0;
+
+    // --------------------------------------------------------
+    // ESTADOS GENERALES
+    // --------------------------------------------------------
+
+    const cargando =
+        cargandoPacientes ||
+        cargandoMedicos ||
+        cargandoTurnos;
+
+    const hayErrores =
+        errorPacientes ||
+        errorMedicos ||
+        errorTurnos;
+
+    const recargarTodo = () => {
+        recargarPacientes();
+        recargarMedicos();
+        recargarTurnos();
+    };
+
+    // --------------------------------------------------------
+    // RENDER
+    // --------------------------------------------------------
 
     return (
+        <div className="space-y-8">
 
+            {/* HEADER */}
 
-            <div className="space-y-8">
+            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
 
-                {/* Header */}
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                    <p className="text-sm font-medium capitalize text-cyan-600">
+                        {formatearFechaActual()}
+                    </p>
 
+                    <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                        Panel de control
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                        Resumen general de la operación de hoy.
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={recargarTodo}
+                    disabled={cargando}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                    <RefreshCw
+                        size={16}
+                        className={cargando ? "animate-spin" : ""}
+                    />
+                    Actualizar información
+                </button>
+
+            </div>
+
+            {/* ERROR */}
+
+            {hayErrores && (
+                <div className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <p className="text-sm font-medium text-cyan-600">
-                            Resumen general
+                        <p className="text-sm font-semibold text-red-800">
+                            No se pudo obtener toda la información.
                         </p>
 
-                        <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
-                            Panel de control
-                        </h2>
-
-                        <p className="mt-1 text-sm text-slate-500">
-                            Información general de la operación de hoy.
+                        <p className="mt-1 text-xs text-red-600">
+                            Algunos indicadores podrían estar incompletos.
+                            Intentá actualizar los datos.
                         </p>
                     </div>
 
-                    <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800">
-                        <CalendarDays size={17} />
-                        Ver agenda
+                    <button
+                        type="button"
+                        onClick={recargarTodo}
+                        className="shrink-0 rounded-lg bg-red-100 px-3 py-2 text-xs font-semibold text-red-700 transition hover:bg-red-200"
+                    >
+                        Reintentar
                     </button>
-
                 </div>
+            )}
 
+            {/* INDICADORES */}
 
-                {/* Stats */}
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
-                    <StatCard
-                        title="Pacientes"
-                        value={
-                            isLoading
-                                ? "..."
+                <StatCard
+                    title="Pacientes"
+                    value={
+                        cargandoPacientes
+                            ? "..."
+                            : errorPacientes
+                                ? "--"
                                 : String(pacientes?.total ?? 0)
-                        }
-                        description="Registrados en el sistema"
-                        icon={Users}
-                        trend="+8.2%"
-                    />
+                    }
+                    description="Registrados en el sistema"
+                    icon={Users}
+                    color="cyan"
+                />
 
-                    <StatCard
-                        title="Médicos"
-                        value="24"
-                        description="Profesionales activos"
-                        icon={Stethoscope}
-                        trend="+2 hoy"
-                    />
+                <StatCard
+                    title="Médicos activos"
+                    value={
+                        cargandoMedicos
+                            ? "..."
+                            : errorMedicos
+                                ? "--"
+                                : String(medicosActivos)
+                    }
+                    description="Profesionales disponibles"
+                    icon={Stethoscope}
+                    color="blue"
+                />
 
-                    <StatCard
-                        title="Turnos de hoy"
-                        value="36"
-                        description="Consultas programadas"
-                        icon={CalendarDays}
-                        trend="8 pendientes"
-                    />
+                <StatCard
+                    title="Turnos de hoy"
+                    value={
+                        cargandoTurnos
+                            ? "..."
+                            : errorTurnos
+                                ? "--"
+                                : String(turnosHoy.length)
+                    }
+                    description="Turnos registrados para hoy"
+                    icon={CalendarDays}
+                    color="violet"
+                />
 
-                    <StatCard
-                        title="Tiempo de espera"
-                        value="14 min"
-                        description="Promedio actual"
-                        icon={Clock3}
-                        trend="-12%"
-                    />
+                <StatCard
+                    title="Pendientes"
+                    value={
+                        cargandoTurnos
+                            ? "..."
+                            : errorTurnos
+                                ? "--"
+                                : String(turnosPendientes)
+                    }
+                    description="Esperando atención"
+                    icon={Clock3}
+                    color="amber"
+                />
 
-                </div>
+            </div>
 
+            {/* CONTENIDO PRINCIPAL */}
 
-                {/* Main grid */}
-                <div className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
+            <div className="grid gap-6 xl:grid-cols-[1.7fr_1fr]">
 
-                    {/* Turnos */}
-                    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                {/* TURNOS DE HOY */}
 
-                        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-
-                            <div>
-                                <h3 className="font-semibold text-slate-900">
-                                    Turnos de hoy
-                                </h3>
-
-                                <p className="mt-1 text-xs text-slate-400">
-                                    Próximas consultas programadas
-                                </p>
-                            </div>
-
-                            <button className="text-xs font-medium text-cyan-600 hover:text-cyan-700">
-                                Ver todos
-                            </button>
-
-                        </div>
-
-                        <div className="divide-y divide-slate-100">
-
-                            <Appointment
-                                time="09:00"
-                                patient="Juan Pérez"
-                                doctor="Dr. Carlos Gómez"
-                                specialty="Clínica médica"
-                                status="Pendiente"
-                            />
-
-                            <Appointment
-                                time="09:30"
-                                patient="Ana Martínez"
-                                doctor="Dra. Laura Fernández"
-                                specialty="Cardiología"
-                                status="Atendido"
-                            />
-
-                            <Appointment
-                                time="10:00"
-                                patient="Pedro López"
-                                doctor="Dr. Carlos Gómez"
-                                specialty="Clínica médica"
-                                status="Pendiente"
-                            />
-
-                            <Appointment
-                                time="10:30"
-                                patient="María Rodríguez"
-                                doctor="Dra. Sofía Torres"
-                                specialty="Pediatría"
-                                status="Pendiente"
-                            />
-
-                        </div>
-
-                    </div>
-
-
-                    {/* Estado */}
-                    <div className="space-y-6">
-
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-
-                            <div className="flex items-center justify-between">
-
-                                <div>
-                                    <h3 className="font-semibold text-slate-900">
-                                        Estado del servicio
-                                    </h3>
-
-                                    <p className="mt-1 text-xs text-slate-400">
-                                        Estado operativo actual
-                                    </p>
-                                </div>
-
-                                <Activity
-                                    size={20}
-                                    className="text-cyan-500"
-                                />
-
-                            </div>
-
-                            <div className="mt-6 flex items-center gap-3 rounded-xl bg-emerald-50 p-4">
-
-                                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
-
-                                <div>
-                                    <p className="text-sm font-semibold text-emerald-800">
-                                        Operativo
-                                    </p>
-
-                                    <p className="text-xs text-emerald-600">
-                                        Todos los servicios funcionando correctamente
-                                    </p>
-                                </div>
-
-                            </div>
-
-                            <div className="mt-5 space-y-4">
-
-                                <ProgressItem
-                                    label="Consultorios ocupados"
-                                    value="7 / 12"
-                                    percentage={58}
-                                />
-
-                                <ProgressItem
-                                    label="Turnos atendidos"
-                                    value="18 / 36"
-                                    percentage={50}
-                                />
-
-                            </div>
-
-                        </div>
-
-
-                        {/* Acciones */}
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6">
-
-                            <h3 className="font-semibold text-slate-900">
-                                Acciones rápidas
-                            </h3>
-
-                            <p className="mt-1 text-xs text-slate-400">
-                                Accesos frecuentes
-                            </p>
-
-                            <div className="mt-5 grid grid-cols-2 gap-3">
-
-                                <QuickAction
-                                    icon={Users}
-                                    label="Paciente"
-                                />
-
-                                <QuickAction
-                                    icon={CalendarDays}
-                                    label="Turno"
-                                />
-
-                                <QuickAction
-                                    icon={Stethoscope}
-                                    label="Médico"
-                                />
-
-                                <QuickAction
-                                    icon={Activity}
-                                    label="Historia"
-                                />
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-
-                {/* Activity */}
-                <div className="rounded-2xl border border-slate-200 bg-white">
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
 
                     <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
 
                         <div>
                             <h3 className="font-semibold text-slate-900">
-                                Actividad reciente
+                                Turnos de hoy
                             </h3>
 
                             <p className="mt-1 text-xs text-slate-400">
-                                Últimos movimientos registrados
+                                Consultas programadas para la jornada
                             </p>
                         </div>
 
-                        <button className="rounded-lg p-2 text-slate-400 hover:bg-slate-50">
-                            <MoreHorizontal size={18} />
-                        </button>
+                        <span className="rounded-lg bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700">
+                            {errorTurnos
+                                ? "--"
+                                : `${turnosHoy.length} turnos`}
+                        </span>
 
                     </div>
 
-                    <div className="divide-y divide-slate-100">
+                    {cargandoTurnos ? (
 
-                        <ActivityItem
-                            title="Nuevo paciente registrado"
-                            description="Juan Pérez fue agregado al sistema"
-                            time="Hace 8 min"
+                        <div className="space-y-4 p-6">
+                            {[1, 2, 3].map((item) => (
+                                <div
+                                    key={item}
+                                    className="flex animate-pulse items-center gap-4"
+                                >
+                                    <div className="h-10 w-14 rounded-lg bg-slate-100" />
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-3 w-1/3 rounded bg-slate-100" />
+                                        <div className="h-3 w-2/3 rounded bg-slate-100" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                    ) : errorTurnos ? (
+
+                        <EmptyState
+                            message="No pudimos cargar los turnos."
                         />
 
-                        <ActivityItem
-                            title="Turno creado"
-                            description="Turno asignado a María Rodríguez"
-                            time="Hace 21 min"
+                    ) : turnosHoy.length === 0 ? (
+
+                        <EmptyState
+                            message="No hay turnos registrados para hoy."
                         />
 
-                        <ActivityItem
-                            title="Consulta finalizada"
-                            description="Dr. Carlos Gómez finalizó una consulta"
-                            time="Hace 34 min"
-                        />
+                    ) : (
+
+                        <div className="divide-y divide-slate-100">
+
+                            {turnosHoy.slice(0, 5).map((turno) => (
+                                <Appointment
+                                    key={turno.id}
+                                    time={formatearHora(turno.fechaTurno)}
+                                    patient={
+                                        `${turno.paciente?.nombre ?? "Paciente"}`
+                                    }
+                                    doctor={
+                                        turno.medico
+                                            ? `Dr./Dra. ${turno.medico.nombre} ${turno.medico.apellido}`
+                                            : "Médico no disponible"
+                                    }
+                                    specialty={
+                                        typeof turno.especialidad === "object"
+                                            ? turno.especialidad?.nombre ?? "Sin especialidad"
+                                            : "Sin especialidad"
+                                    }
+                                    status={turno.estado}
+                                />
+                            ))}
+
+                        </div>
+                    )}
+
+                    {!cargandoTurnos &&
+                        !errorTurnos &&
+                        turnosHoy.length > 5 && (
+                            <div className="border-t border-slate-100 px-6 py-4 text-center">
+                                <p className="text-xs text-slate-500">
+                                    Se muestran los primeros 5 turnos de {turnosHoy.length} registrados.
+                                </p>
+                            </div>
+                        )}
+
+                </div>
+
+                {/* ESTADO DEL SERVICIO */}
+
+                <div className="space-y-6">
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+
+                        <div className="flex items-center justify-between">
+
+                            <div>
+                                <h3 className="font-semibold text-slate-900">
+                                    Resumen de atención
+                                </h3>
+
+                                <p className="mt-1 text-xs text-slate-400">
+                                    Estado de los turnos de hoy
+                                </p>
+                            </div>
+
+                            <Activity
+                                size={20}
+                                className="text-cyan-500"
+                            />
+
+                        </div>
+
+                        {cargandoTurnos ? (
+
+                            <div className="mt-6 h-32 animate-pulse rounded-xl bg-slate-100" />
+
+                        ) : errorTurnos ? (
+
+                            <EmptyState message="No hay información disponible." />
+
+                        ) : (
+
+                            <>
+                                <div className="mt-6 space-y-4">
+
+                                    <SummaryItem
+                                        label="Pendientes"
+                                        value={turnosPendientes}
+                                        icon={Clock3}
+                                        color="amber"
+                                    />
+
+                                    <SummaryItem
+                                        label="Atendidos"
+                                        value={turnosAtendidos}
+                                        icon={CheckCircle2}
+                                        color="emerald"
+                                    />
+
+                                    <SummaryItem
+                                        label="Cancelados"
+                                        value={turnosCancelados}
+                                        icon={XCircle}
+                                        color="red"
+                                    />
+
+                                </div>
+
+                                <div className="mt-7 border-t border-slate-100 pt-5">
+
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <span className="text-xs font-medium text-slate-600">
+                                            Porcentaje de atención
+                                        </span>
+
+                                        <span className="text-sm font-bold text-slate-900">
+                                            {porcentajeAtencion}%
+                                        </span>
+                                    </div>
+
+                                    <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                                        <div
+                                            className="h-full rounded-full bg-cyan-500 transition-all duration-500"
+                                            style={{
+                                                width: `${porcentajeAtencion}%`,
+                                            }}
+                                        />
+                                    </div>
+
+                                    <p className="mt-2 text-[11px] text-slate-400">
+                                        {turnosAtendidos} de {turnosProgramados} turnos no cancelados atendidos.
+                                    </p>
+
+                                </div>
+                            </>
+                        )}
+
+                    </div>
+
+                    {/* RESUMEN DE MÉDICOS */}
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-50 text-cyan-600">
+                                <Stethoscope size={19} />
+                            </div>
+
+                            <div>
+                                <h3 className="font-semibold text-slate-900">
+                                    Equipo médico
+                                </h3>
+
+                                <p className="text-xs text-slate-400">
+                                    Estado de los profesionales
+                                </p>
+                            </div>
+                        </div>
+
+                        {cargandoMedicos ? (
+
+                            <div className="mt-5 h-12 animate-pulse rounded-lg bg-slate-100" />
+
+                        ) : errorMedicos ? (
+
+                            <p className="mt-5 text-xs text-red-500">
+                                No se pudo cargar la información.
+                            </p>
+
+                        ) : (
+
+                            <div className="mt-5 flex items-center justify-between">
+                                <div>
+                                    <p className="text-2xl font-bold text-slate-900">
+                                        {medicosActivos}
+                                    </p>
+
+                                    <p className="text-xs text-slate-400">
+                                        Médicos activos
+                                    </p>
+                                </div>
+
+                                <div className="text-right">
+                                    <p className="text-lg font-semibold text-slate-700">
+                                        {listaMedicos.length - medicosActivos}
+                                    </p>
+
+                                    <p className="text-xs text-slate-400">
+                                        Inactivos
+                                    </p>
+                                </div>
+                            </div>
+
+                        )}
 
                     </div>
 
@@ -297,44 +545,61 @@ export default function Dashboard() {
 
             </div>
 
+            {/* PIE DEL DASHBOARD */}
 
+            <div className="flex flex-col gap-2 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-slate-400">
+                    Sala de Emergencias Municipal Goya
+                </p>
+
+                <p className="text-xs text-slate-400">
+                    Información correspondiente a {fechaHoy}
+                </p>
+            </div>
+
+        </div>
     );
 }
 
-
-/* -------------------------------- */
-/* Components                       */
-/* -------------------------------- */
+// ============================================================
+// TARJETA DE ESTADÍSTICA
+// ============================================================
 
 interface StatCardProps {
     title: string;
     value: string;
     description: string;
-    trend: string;
-    icon: typeof Users;
+    icon: LucideIcon;
+    color: "cyan" | "blue" | "violet" | "amber";
 }
+
+const statColors = {
+    cyan: "bg-cyan-50 text-cyan-600",
+    blue: "bg-blue-50 text-blue-600",
+    violet: "bg-violet-50 text-violet-600",
+    amber: "bg-amber-50 text-amber-600",
+};
 
 function StatCard({
     title,
     value,
     description,
-    trend,
     icon: Icon,
+    color,
 }: StatCardProps) {
-
     return (
         <div className="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/50">
 
             <div className="flex items-start justify-between">
 
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition group-hover:bg-cyan-50 group-hover:text-cyan-600">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${statColors[color]}`}>
                     <Icon size={19} />
                 </div>
 
-                <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
-                    {trend}
-                    <ArrowUpRight size={13} />
-                </div>
+                <ArrowUpRight
+                    size={16}
+                    className="text-slate-300 transition group-hover:text-cyan-500"
+                />
 
             </div>
 
@@ -358,13 +623,16 @@ function StatCard({
     );
 }
 
+// ============================================================
+// TURNO
+// ============================================================
 
 interface AppointmentProps {
     time: string;
     patient: string;
     doctor: string;
     specialty: string;
-    status: "Pendiente" | "Atendido";
+    status: "pendiente" | "atendido" | "cancelado";
 }
 
 function Appointment({
@@ -374,12 +642,22 @@ function Appointment({
     specialty,
     status,
 }: AppointmentProps) {
+    const estilos = {
+        pendiente: "bg-amber-50 text-amber-600",
+        atendido: "bg-emerald-50 text-emerald-600",
+        cancelado: "bg-red-50 text-red-600",
+    };
+
+    const etiquetas = {
+        pendiente: "Pendiente",
+        atendido: "Atendido",
+        cancelado: "Cancelado",
+    };
 
     return (
         <div className="flex items-center gap-4 px-6 py-4 transition hover:bg-slate-50">
 
             <div className="w-14 shrink-0">
-
                 <p className="text-sm font-semibold text-slate-900">
                     {time}
                 </p>
@@ -387,13 +665,11 @@ function Appointment({
                 <p className="mt-0.5 text-[10px] text-slate-400">
                     Hoy
                 </p>
-
             </div>
 
             <div className="h-9 w-px bg-slate-200" />
 
             <div className="min-w-0 flex-1">
-
                 <p className="truncate text-sm font-medium text-slate-800">
                     {patient}
                 </p>
@@ -401,121 +677,78 @@ function Appointment({
                 <p className="mt-0.5 truncate text-xs text-slate-400">
                     {doctor} · {specialty}
                 </p>
-
             </div>
 
-            <span
-                className={
-                    status === "Atendido"
-                        ? "rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-medium text-emerald-600"
-                        : "rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-medium text-amber-600"
-                }
-            >
-                {status}
+            <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium ${estilos[status]}`}>
+                {etiquetas[status]}
             </span>
 
         </div>
     );
 }
 
+// ============================================================
+// RESUMEN DE ESTADOS
+// ============================================================
 
-interface ProgressItemProps {
+interface SummaryItemProps {
     label: string;
-    value: string;
-    percentage: number;
+    value: number;
+    icon: LucideIcon;
+    color: "amber" | "emerald" | "red";
 }
 
-function ProgressItem({
+const summaryColors = {
+    amber: "bg-amber-50 text-amber-600",
+    emerald: "bg-emerald-50 text-emerald-600",
+    red: "bg-red-50 text-red-600",
+};
+
+function SummaryItem({
     label,
     value,
-    percentage,
-}: ProgressItemProps) {
-
+    icon: Icon,
+    color,
+}: SummaryItemProps) {
     return (
-        <div>
+        <div className="flex items-center justify-between">
 
-            <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-3">
 
-                <span className="text-xs font-medium text-slate-600">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${summaryColors[color]}`}>
+                    <Icon size={17} />
+                </div>
+
+                <span className="text-sm font-medium text-slate-600">
                     {label}
                 </span>
 
-                <span className="text-xs font-semibold text-slate-800">
-                    {value}
-                </span>
-
             </div>
 
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
-
-                <div
-                    className="h-full rounded-full bg-cyan-500 transition-all"
-                    style={{ width: `${percentage}%` }}
-                />
-
-            </div>
+            <span className="text-sm font-bold text-slate-900">
+                {value}
+            </span>
 
         </div>
     );
 }
 
+// ============================================================
+// ESTADO VACÍO
+// ============================================================
 
-interface QuickActionProps {
-    icon: typeof Users;
-    label: string;
-}
-
-function QuickAction({
-    icon: Icon,
-    label,
-}: QuickActionProps) {
-
+function EmptyState({ message }: { message: string }) {
     return (
-        <button className="flex flex-col items-center justify-center gap-2 rounded-xl border border-slate-100 p-4 text-slate-500 transition hover:border-cyan-100 hover:bg-cyan-50 hover:text-cyan-600">
+        <div className="flex min-h-40 flex-col items-center justify-center px-6 py-8 text-center">
 
-            <Icon size={19} />
+            <CalendarDays
+                size={28}
+                className="text-slate-300"
+            />
 
-            <span className="text-xs font-medium">
-                {label}
-            </span>
-
-        </button>
-    );
-}
-
-
-interface ActivityItemProps {
-    title: string;
-    description: string;
-    time: string;
-}
-
-function ActivityItem({
-    title,
-    description,
-    time,
-}: ActivityItemProps) {
-
-    return (
-        <div className="flex items-center gap-4 px-6 py-4">
-
-            <div className="h-2 w-2 shrink-0 rounded-full bg-cyan-500" />
-
-            <div className="min-w-0 flex-1">
-
-                <p className="text-sm font-medium text-slate-800">
-                    {title}
-                </p>
-
-                <p className="mt-0.5 text-xs text-slate-400">
-                    {description}
-                </p>
-
-            </div>
-
-            <span className="text-[10px] text-slate-400">
-                {time}
-            </span>
+            <p className="mt-3 text-sm text-slate-500">
+                {message}
+            </p>
 
         </div>
     );
