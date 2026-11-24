@@ -95,7 +95,7 @@ export default function AppRouter() {
                         </Route>
                         
                         {/* Pacientes: todos los roles */}
-                        <Route element={<ProtectedRoute rolesPermitidos={["admin", "recepcionista", "medico"]} />}>
+                        <Route element={<ProtectedRoute rolesPermitidos={["admin", "recepcionista"]} />}>
                             <Route
                                 path="/pacientes"
                                 element={<PacientesPage />}
