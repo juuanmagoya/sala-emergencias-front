@@ -36,10 +36,10 @@ export const NAV_GESTION: NavItem[] = [
         title: "Pacientes",
         icon: Users,
         href: "/pacientes",
-        rolesPermitidos: ["admin", "recepcionista"],
+        rolesPermitidos: ["admin", "recepcionista", "medico"],
     },
     {
-        title: "Recepción",
+        title: "Nuevo Turno",
         icon: HeartPulse,
         href: "/recepcion",
         rolesPermitidos: ["admin", "recepcionista"],
@@ -60,7 +60,7 @@ export const NAV_GESTION: NavItem[] = [
         title: "Agenda",
         icon: CalendarDays,
         href: "/mis-turnos",
-        rolesPermitidos: ["admin", "medico"],
+        rolesPermitidos: ["medico"],
     },
     {
         title: "Consultorios",

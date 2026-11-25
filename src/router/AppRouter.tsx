@@ -119,7 +119,7 @@ export default function AppRouter() {
                         </Route>
 
                         {/* Agenda: administrador y médico */}
-                        <Route element={<ProtectedRoute rolesPermitidos={["admin", "medico"]} />}>
+                        <Route element={<ProtectedRoute rolesPermitidos={["medico"]} />}>
                             <Route
                                 path="/mis-turnos"
                                 element={<AgendaMedicoPage />}
