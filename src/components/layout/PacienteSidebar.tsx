@@ -1,6 +1,8 @@
+
 import { NavLink } from "react-router-dom";
 
 import {
+    Bot,
     CalendarClock,
     CalendarPlus,
     FileText,
@@ -40,6 +42,11 @@ const navegacion = [
         title: "Historias clínicas",
         icon: FileText,
         href: "/portal/historias-clinicas",
+    },
+    {
+        title: "Asistente médico",
+        icon: Bot,
+        href: "/portal/asistente-medico",
     },
 ] as const;
 
@@ -136,9 +143,7 @@ export default function PacienteSidebar({
                                     to={href}
                                     end={href === "/portal"}
                                     onClick={onCerrar}
-                                    className={({
-                                        isActive,
-                                    }) =>
+                                    className={({ isActive }) =>
                                         cn(
                                             "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
                                             isActive
@@ -188,7 +193,6 @@ export default function PacienteSidebar({
                         </div>
                     </div>
 
-                    {/* Reutiliza el logout del AuthContext. */}
                     <button
                         type="button"
                         onClick={logout}

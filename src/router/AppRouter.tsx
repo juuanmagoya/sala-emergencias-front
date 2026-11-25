@@ -25,6 +25,7 @@ import PortalInicioPage from "@/pages/portal/PortalInicioPage";
 import HistoriasClinicasPage from "@/pages/portal/HistoriasClinicasPage";
 import ReservarTurnoPage from "@/pages/portal/ReservarTurnoPage";
 import MisTurnosPage from "@/pages/portal/MisTurnosPage";
+import ChatbotPage from "@/pages/portal/ChatbotPage";
 
 export default function AppRouter() {
     return (
@@ -58,6 +59,11 @@ export default function AppRouter() {
                         <Route
                             path="/portal/mis-turnos"
                             element={<MisTurnosPage />}
+                        />
+
+                        <Route
+                            path="/portal/asistente-medico"
+                            element={<ChatbotPage />}
                         />
 
                         {/* Cualquier subruta desconocida vuelve al inicio. */}
