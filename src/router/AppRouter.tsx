@@ -12,6 +12,7 @@ import PacienteLayout from "@/components/layout/PacienteLayout";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import PacienteRoute from "@/components/auth/PacienteRoute";
 import LoginPage from "@/pages/auth/LoginPage";
+import RegistroPacientePage from "@/pages/auth/RegistroPacientePage";
 
 import PacientesPage from "@/pages/pacientes/PacientesPage";
 import EspecialidadesPage from "@/pages/especialidades/EspecialidadesPage";
@@ -32,10 +33,14 @@ export default function AppRouter() {
         <BrowserRouter>
             <Routes>
 
-                {/* Ruta pública */}
+                {/* Rutas públicas */}
                 <Route
                     path="/login"
                     element={<LoginPage />}
+                />
+                <Route
+                    path="/registro-paciente"
+                    element={<RegistroPacientePage />}
                 />
 
                 {/* Portal del Paciente: exclusivo para pacientes */}
